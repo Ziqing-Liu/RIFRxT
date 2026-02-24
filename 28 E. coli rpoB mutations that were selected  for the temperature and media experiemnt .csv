@@ -1,0 +1,30 @@
+,Sample ID,AA mutant name E.coli,Our A. bayli match,Our L. plantarum match,Journal/paper match ,Reason for Selection ,Journal Link
+1,R01D2,rpoB_V146F,YES,NO,,Also found in our lab bayli mutant ,
+2,R04F11,rpoB_S509R,YES,NO,,Also found in our lab bayli mutant ,
+3,R3,rpoB_S512F,YES,NO,,Also found in our lab bayli mutant ,
+4,R01F6,rpoB_Q513P,NO,YES,,Also found in our lab plantarum mutant ,
+5,RO4E9,rpoB_D516N,NO,YES,,Also found in our lab plantarum mutant ,
+6,R36,rpoB_D516G,YES,NO,,Also found in our lab bayli mutant ,
+7,R2,rpoB_H526N,YES,YES,,Found in both lab bayli and plantarum mutant,
+8,R12,rpoB_H526Y,YES,YES,,Found in both lab bayli and plantarum mutant,
+9,R01B11,rpoB_H526D,YES,NO,,Also found in our lab bayli mutant ,
+10,R03D2,rpoB_R529C,NO,YES,,Also found in our lab plantarum mutant ,
+11,R02G6,rpoB_R529G,NO,YES,,Also found in our lab plantarum mutant ,
+12,R30,rpoB_I572S,YES,NO,,Found in both lab bayli and plantarum mutant,
+13,R14,rpoB_I572L,YES,NO,,Found in both lab bayli and plantarum mutant,
+14,R18,rpoB_I572F,,,YES,Matched with another E. coli mutant ,"(Rodríguez-Verdugo, 2013) doi: 10.1186/1471-2148-13-51"
+15,R9,rpoB_S522F,,,YES,Matched with another E. coli mutant ,"(Ozbilek, 2025) doi: 10.1093/molbev/msaf227"
+16,R04E8,rpoB_D516V,,,YES,Matched with another T.b mutant ,"(Ali, 2018) https://applications.emro.who.int/imemrf/Pak_J_Med_Res/Pak_J_Med_Res_2018_57_1_14_19.pdf"
+17,R8,rpoB_L511P,,,YES,Matched with another T.b mutantf,"(Ali, 2018) https://applications.emro.who.int/imemrf/Pak_J_Med_Res/Pak_J_Med_Res_2018_57_1_14_19.pdf"
+18,R01F6,rpoB_D516Y ,,,YES,Matched with another T.b mutant ,"(Mvelase, 2018) doi: 10.1093/ofid/ofz066"
+19,R10B10,rpoB_L533P,,,YES,Matched with another T.b mutant,"(Al-Mutairi, 2019) doi: https://doi.org/10.1186/s12879-018-3638-z"
+20,R26,rpoB_S531F,,,YES,Matched with another T.b mutant ,"(Takawira, 2017) doi:10.11604/pamj.2017.27.145.10884"
+21,R19,rpoB_R529L,,,YES,Matched with another E. coli mutant,"(Severinovz, 1992) https://www.jbc.org/article/S0021-9258(18)82407-3/pdf"
+22,R17,rpoB_S512P,,,YES,Matched with another S. Typhi mutant ,"(Lee, 2025) doi: https://doi.org/10.1016/j.ebiom.2025.105788"
+23,R04G6,rpoB_H526Q,,,YES,Matched with another T.b mutant,"(Huang, 2014) doi: 10.1111/1469-0691.12517"
+24,R04F7,rpoB_T563P,,,YES,Matched with another E. coli mutant,"(Miropolskaya, 2022) doi: https://doi.org/10.1016/j.jbc.2022.102099"
+25,R04C4,rpoB_S531Y,,,YES,Matched with another R. equi mutant ,"(Álvarez-Narváez, 2021) doi: https://doi.org/10.3201/eid2702.203030"
+26,R04C11,rpoB_V146G,,,YES,Matched with another E. coli mutant,"(Zhou, 2012) doi: 10.1074/jbc.M112.429464"
+27,R04B7,rpoB_G534C,,,YES,Matched with another E. coli mutant,"(Szalewska-Palasz, 2007) doi: 10.1074/jbc.M610181200 "
+28,R02B6,rpoB_G570C,,,YES,Matched with another E. coli mutant,"(Zhou, 2012) doi: 10.1074/jbc.M112.429464"
+,,,,,,,
