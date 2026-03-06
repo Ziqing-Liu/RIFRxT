@@ -1,0 +1,60 @@
+Species,Strain,Genotype,Gene,Nt_pos,Nt_pos_Ecoli,Nt_original,Nt_mutation,Nt_OtoM,Nt_mut_name,Nt_mut_name_Ecoli,Codon_original,Codon_mutation,Codon_OtoM,AA_pos,AA_pos_Ecoli,AA_original,AA_mutation,AA_OtoM,AA_mut_name,AA_mut_name_Ecoli,Origin,MIC_mgPerL,Rel_fitness,n_clones,Comments,Ref_code,Entry_by,Strain_ID,RefSeq_ID,Warning,Numbering
+Escherichia coli,MG1655,R9,rpoB,1565,1565,C,T,C -> T,rpoB_C1565T,rpoB_C1565T,TCT,TTT,TCT -> TTT,522,522,S,F,S -> F,rpoB_S522F,rpoB_S522F,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,1
+Escherichia coli,MG1655,R8,rpoB,1532,1532,T,C,T -> C,rpoB_T1532C,rpoB_T1532C,CTG,CCG,CTG -> CCG,511,511,L,P,L -> P,rpoB_L511P,rpoB_L511P,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,2
+Escherichia coli,MG1655,R36,rpoB,1547,1547,A,G,A -> G,rpoB_A1547G,rpoB_A1547G,GAC,GGC,GAC -> GGC,516,516,D,G,D -> G,rpoB_D516G,rpoB_D516G,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,3
+Escherichia coli,MG1655,R30,rpoB,1715,1715,T,G,T -> G,rpoB_T1715G,rpoB_T1715G,ATC,AGC,ATC -> AGC,572,572,I,S,I -> S,rpoB_I572S,rpoB_I572S,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,4
+Escherichia coli,MG1655,R3,rpoB,1535,1535,C,T,C -> T,rpoB_C1535T,rpoB_C1535T,TCT,TTT,TCT -> TTT,512,512,S,F,S -> F,rpoB_S512F,rpoB_S512F,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,5
+Escherichia coli,MG1655,R26,rpoB,1592,1592,C,T,C -> T,rpoB_C1592T,rpoB_C1592T,TCC,TTC,TCC -> TTC,531,531,S,F,S -> F,rpoB_S531F,rpoB_S531F,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,6
+Escherichia coli,MG1655,R2,rpoB,1576,1576,C,A,C -> A,rpoB_C1576A,rpoB_C1576A,CAC,AAC,CAC -> AAC,526,526,H,N,H -> N,rpoB_H526N,rpoB_H526N,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,7
+Escherichia coli,MG1655,R19,rpoB,1586,1586,G,T,G -> T,rpoB_G1586T,rpoB_G1586T,CGT,CTT,CGT -> CTT,529,529,R,L,R -> L,rpoB_R529L,rpoB_R529L,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,8
+Escherichia coli,MG1655,R18,rpoB,1714,1714,A,T,A -> T,rpoB_A1714T,rpoB_A1714T,ATC,TTC,ATC -> TTC,572,572,I,F,I -> F,rpoB_I572F,rpoB_I572F,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,9
+Escherichia coli,MG1655,R17,rpoB,1534,1534,T,C,T -> C,rpoB_T1534C,rpoB_T1534C,TCT,CCT,TCT -> CCT,512,512,S,P,S -> P,rpoB_S512P,rpoB_S512P,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,10
+Escherichia coli,MG1655,R14,rpoB,1714,1714,A,C,A -> C,rpoB_A1714C,rpoB_A1714C,ATC,CTC,ATC -> CTC,572,572,I,L,I -> L,rpoB_I572L,rpoB_I572L,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,11
+Escherichia coli,MG1655,R12,rpoB,1576,1576,C,T,C -> T,rpoB_C1576T,rpoB_C1576T,CAC,TAC,CAC -> TAC,526,526,H,Y,H -> Y,rpoB_H526Y,rpoB_H526Y,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia- Honours),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,12
+Escherichia coli,MG1655,R10B10,rpoB,1598,1598,T,C,T -> C,rpoB_T1598C,rpoB_T1598C,CTC,CCC,CTC -> CCC,533,533,L,P,L -> P,rpoB_L533P,rpoB_L533P,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,13
+Escherichia coli,MG1655,R04G6,rpoB,1578,1578,C,A,C -> A,rpoB_C1578A,rpoB_C1578A,CAC,CAA,CAC -> CAA,526,526,H,Q,H -> Q,rpoB_H526Q,rpoB_H526Q,Lab mutants,NA,NA,NA,also has yjfM mutation,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,14
+Escherichia coli,MG1655,R04F7,rpoB,1687,1687,A,C,A -> C,rpoB_A1687C,rpoB_A1687C,ACC,CCC,ACC -> CCC,563,563,T,P,T -> P,rpoB_T563P,rpoB_T563P,Lab mutants,NA,NA,NA,frequency 0.904,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,15
+Escherichia coli,MG1655,R04F11,rpoB,1527,1527,C,G,C -> G,rpoB_C1527G,rpoB_C1527G,AGC,AGG,AGC -> AGG,509,509,S,R,S -> R,rpoB_S509R,rpoB_S509R,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,16
+Escherichia coli,MG1655,R04E9,rpoB,1546,1546,G,A,G -> A,rpoB_G1546A,rpoB_G1546A,GAC,AAC,GAC -> AAC,516,516,D,N,D -> N,rpoB_D516N,rpoB_D516N,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,17
+Escherichia coli,MG1655,R04E8,rpoB,1547,1547,A,T,A -> T,rpoB_A1547T,rpoB_A1547T,GAC,GTC,GAC -> GTC,516,516,D,V,D -> V,rpoB_D516V,rpoB_D516V,Lab mutants,NA,NA,NA,frequency 0.759,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,18
+Escherichia coli,MG1655,R04C4,rpoB,1592,1592,C,A,C -> A,rpoB_C1592A,rpoB_C1592A,TCC,TAC,TCC -> TAC,531,531,S,Y,S -> Y,rpoB_S531Y,rpoB_S531Y,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,19
+Escherichia coli,MG1655,R04C11,rpoB,437,437,T,G,T -> G,rpoB_T437G,rpoB_T437G,GTT,GGT,GTT -> GGT,146,146,V,G,V -> G,rpoB_V146G,rpoB_V146G,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,20
+Escherichia coli,MG1655,R04B7,rpoB,1600,1600,G,T,G -> T,rpoB_G1600T,rpoB_G1600T,GGC,TGC,GGC -> TGC,534,534,G,C,G -> C,rpoB_G534C,rpoB_G534C,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,21
+Escherichia coli,MG1655,R03D2,rpoB,1585,1585,C,T,C -> T,rpoB_C1585T,rpoB_C1585T,CGT,TGT,CGT -> TGT,529,529,R,C,R -> C,rpoB_R529C,rpoB_R529C,Lab mutants,NA,NA,NA,frequency 0.377,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,22
+Escherichia coli,MG1655,R02G6,rpoB,1585,1585,C,G,C -> G,rpoB_C1585G,rpoB_C1585G,CGT,GGT,CGT -> GGT,529,529,R,G,R -> G,rpoB_R529G,rpoB_R529G,Lab mutants,NA,NA,NA,frequency 0.377,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,23
+Escherichia coli,MG1655,R02B6,rpoB,1708,1708,G,T,G -> T,rpoB_G1708T,rpoB_G1708T,GGT,TGT,GGT -> TGT,570,570,G,C,G -> C,rpoB_G570C,rpoB_G570C,Lab mutants,NA,NA,NA,frequency 0.338,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,24
+Escherichia coli,MG1655,R01F6,rpoB,1538,1538,A,C,A -> C,rpoB_A1538C,rpoB_A1538C,CAG,CCG,CAG -> CCG,513,513,Q,P,Q -> P,rpoB_Q513P,rpoB_Q513P,Lab mutants,NA,NA,NA,frequency 0.601,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,25
+Escherichia coli,MG1655,R01D2,rpoB,436,436,G,T,G -> T,rpoB_G436T,rpoB_G436T,GTT,TTT,GTT -> TTT,146,146,V,F,V -> F,rpoB_V146F,rpoB_V146F,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,26
+Escherichia coli,MG1655,R01C11,rpoB,1594,1594,G,C,G -> C,rpoB_G1594C,rpoB_G1594C,GCA,CCA,GCA -> CCA,532,532,A,P,A -> P,rpoB_A532P,rpoB_A532P,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1655,rpoB_Escherichia_coli_MG1655,NA,27
+Escherichia coli,MG1656,R01B11,rpoB,1576,1576,C,G,C -> G,rpoB_C1576G,rpoB_C1576G,CAC,GAC,CAC -> GAC,526,526,H,D,H -> D,rpoB_H526D,rpoB_H526D,Lab mutants,NA,NA,NA,NA,ALJElab (Alicia),Alicia,Escherichia_coli_MG1656,rpoB_Escherichia_coli_MG1655,NA,28
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,Numbering,Genotype,AA_mut_name,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,0,WT,MG1655,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,1,R9,rpoB_S522F,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,2,R8,rpoB_L511P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,3,R36,rpoB_D516G,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,4,R30,rpoB_I572S,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,5,R3,rpoB_S512F,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,6,R26,rpoB_S531F,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,7,R2,rpoB_H526N,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,8,R19,rpoB_R529L,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,9,R18,rpoB_I572F,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,10,R17,rpoB_S512P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,11,R14,rpoB_I572L,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,12,R12,rpoB_H526Y,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,13,R10B10,rpoB_L533P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,14,R04G6,rpoB_H526Q,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,15,R04F7,rpoB_T563P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,16,R04F11,rpoB_S509R,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,17,R04E9,rpoB_D516N,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,18,R04E8,rpoB_D516V,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,19,R04C4,rpoB_S531Y,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,20,R04C11,rpoB_V146G,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,21,R04B7,rpoB_G534C,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,22,R03D2,rpoB_R529C,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,23,R02G6,rpoB_R529G,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,24,R02B6,rpoB_G570C,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,25,R01F6,rpoB_Q513P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,26,R01D2,rpoB_V146F,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,27,R01C11,rpoB_A532P,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,28,R01B11,rpoB_H526D,,,,,,,,,,,,,,,,,,,,,,,,,,,,
