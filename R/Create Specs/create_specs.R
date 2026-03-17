@@ -23,7 +23,7 @@ mutant_IDs <- c("WT", paste0("M", 1:28))
 mutant_IDs <- c("WT", read_csv("AW_original_rifmuts_list.csv") |> pull(Numbering))
 
 # 1) make all spec files for the growth assays:
-for(temp in 22:42) {
+for(temp in 46:60) {
   makeSpec_wrapping(
     plateName = paste0("RIFxT", temp),
     wrapName = "mutant_ID",
