@@ -2,14 +2,13 @@ library(tidyverse)
 library(grow96)
 
 
-
 data <- processODData(specPath="specs", dataPath="data")
 
 qcODData(data, path = "qc")
 
-shinyPlate(data)
-
 data <- blankODs(data, method = "fixed", value = 0.05)
+
+shinyPlate(data)
 
 growthAnalysis <- analyseODData(data)
 
