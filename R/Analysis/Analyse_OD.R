@@ -149,5 +149,185 @@ plot_od_heatmap <- function(data, plates = c("RIFxT42", "RIFxT45")) {
 
 plot_od_heatmap(data)
 
+### test
+library(lme4)
+library(lmerTest)  # gives p-values for lmer
+
+# Extract per-replicate growth parameters linked to temperature
+# (assuming growthAnalysis$data or similar has individual well estimates)
+
+stat_data <- data %>%
+  filter(Plate %in% c("RIFxT42", "RIFxT45"),
+         !is.na(mutant_ID), mutant_ID != "") %>%
+  group_by(mutant_ID, SetTemperature, growth_medium, Plate, Well) %>%
+  summarise(maxOD = max(blankedOD, na.rm = TRUE), .groups = "drop")
+
+# Linear mixed model
+model <- lmer(maxOD ~ SetTemperature * growth_medium + (1 | mutant_ID) + (1 | Plate),
+              data = stat_data)
+
+summary(model)
+anova(model)
+
+# ============================================================================
+# STATISTICAL ANALYSIS: Temperature Effect on Max OD (42°C vs 45°C)
+# ============================================================================
+
+library(lme4)
+library(lmerTest)    # install.packages("lmerTest") — adds p-values to lmer
+library(emmeans)     # install.packages("emmeans")  — post-hoc comparisons
+library(broom.mixed) # install.packages("broom.mixed") — tidy model output
 
 
+# ── 1. Build per-well summary (if not already done) ─────────────────────────
+stat_data <- od_data %>%
+  dplyr::filter(Plate %in% c("RIFxT42", "RIFxT45"),
+                !is.na(mutant_ID), mutant_ID != "") %>%
+  mutate(
+    mutant_ID      = factor(mutant_ID, levels = c("WT", paste0("M", 1:28))),
+    SetTemperature = factor(SetTemperature)   # 42 vs 45
+  ) %>%
+  group_by(mutant_ID, SetTemperature, growth_medium, Plate, Well) %>%
+  summarise(maxOD = max(OD, na.rm = TRUE), .groups = "drop")
+
+
+# ── 2. Sanity check ──────────────────────────────────────────────────────────
+cat("\n--- Data summary ---\n")
+print(summary(stat_data))
+
+cat("\n--- Sample sizes per temperature ---\n")
+print(stat_data %>% count(SetTemperature, growth_medium))
+
+
+# ── 3. Quick check: normality of maxOD ──────────────────────────────────────
+# If p > 0.05, data is approximately normal → LMM is appropriate
+shapiro_result <- shapiro.test(stat_data$maxOD)
+cat("\n--- Shapiro-Wilk normality test on maxOD ---\n")
+print(shapiro_result)
+# Note: LMM is robust to mild non-normality with large n
+
+
+# ============================================================================
+# ANALYSIS A — Linear Mixed Model (primary, recommended for publication)
+# Fixed effects:  SetTemperature, growth_medium, and their interaction
+# Random effects: mutant_ID (generalise across mutants), Plate (block effect)
+# ============================================================================
+
+cat("\n\n=== LINEAR MIXED MODEL ===\n")
+
+model <- lmer(
+  maxOD ~ SetTemperature * growth_medium + (1 | mutant_ID) + (1 | Plate),
+  data = stat_data
+)
+
+cat("\n--- Model summary ---\n")
+print(summary(model))
+
+cat("\n--- ANOVA table (F-tests for fixed effects) ---\n")
+print(anova(model))
+
+# Variance explained by random effects
+cat("\n--- Random effect variances ---\n")
+print(VarCorr(model))
+
+
+# ── Post-hoc: pairwise temperature comparison within each medium ─────────────
+cat("\n--- Post-hoc: 42°C vs 45°C within each growth medium ---\n")
+emm <- emmeans(model, pairwise ~ SetTemperature | growth_medium)
+print(emm$contrasts)
+
+# Overall temperature effect collapsed across media
+cat("\n--- Overall temperature effect (collapsed across media) ---\n")
+emm_temp <- emmeans(model, pairwise ~ SetTemperature)
+print(emm_temp$contrasts)
+
+# Tidy model output for easy reporting
+tidy_model <- tidy(model, effects = "fixed", conf.int = TRUE)
+cat("\n--- Tidy fixed effects with 95% CI ---\n")
+print(tidy_model)
+
+
+# ============================================================================
+# ANALYSIS B — Paired / per-mutant Wilcoxon (quick, non-parametric check)
+# Use this as a supplement or when normality assumption is violated
+# ============================================================================
+
+cat("\n\n=== WILCOXON SIGNED-RANK TEST (per mutant, collapsed across media) ===\n")
+
+wilcox_data <- stat_data %>%
+  group_by(mutant_ID, SetTemperature) %>%
+  summarise(mean_maxOD = mean(maxOD, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = SetTemperature,
+              values_from = mean_maxOD,
+              names_prefix = "temp_")
+
+wilcox_result <- wilcox.test(wilcox_data$temp_42, wilcox_data$temp_45,
+                             paired = TRUE, exact = FALSE)
+cat("\n--- Wilcoxon result ---\n")
+print(wilcox_result)
+
+
+# ── Per-mutant t-tests with FDR correction ───────────────────────────────────
+cat("\n--- Per-mutant t-tests (FDR corrected) ---\n")
+
+per_mutant_tests <- stat_data %>%
+  group_by(mutant_ID, growth_medium) %>%
+  group_modify(~ {
+    d42 <- dplyr::filter(.x, SetTemperature == "42")$maxOD
+    d45 <- dplyr::filter(.x, SetTemperature == "45")$maxOD
+    
+    if (length(d42) < 2 | length(d45) < 2) {
+      return(tibble(p.value = NA, estimate = NA))
+    }
+    
+    t_res <- t.test(d42, d45, var.equal = FALSE)
+    tibble(
+      mean_42  = mean(d42),
+      mean_45  = mean(d45),
+      delta_OD = mean(d45) - mean(d42),
+      p.value  = t_res$p.value
+    )
+  }) %>%
+  ungroup() %>%
+  mutate(p.adjusted = p.adjust(p.value, method = "BH")) %>%   # Benjamini-Hochberg FDR
+  arrange(p.adjusted)
+
+cat("\n--- Top significant mutants (FDR < 0.05) ---\n")
+print(per_mutant_tests %>% dplyr::filter(p.adjusted < 0.05))
+
+cat("\n--- Full per-mutant results ---\n")
+print(per_mutant_tests, n = Inf)
+
+
+# ── Save results to CSV ──────────────────────────────────────────────────────
+write_csv(per_mutant_tests, "per_mutant_temperature_tests.csv")
+write_csv(tidy_model,       "lmm_fixed_effects.csv")
+
+cat("\n✓ Results saved to per_mutant_temperature_tests.csv and lmm_fixed_effects.csv\n")
+
+
+# ============================================================================
+# SUMMARY TABLE — print to console for quick reporting
+# ============================================================================
+
+cat("\n\n=== SUMMARY FOR REPORTING ===\n")
+cat("Model: maxOD ~ Temperature × Media + (1|mutant_ID) + (1|Plate)\n\n")
+
+anova_tbl <- anova(model)
+cat(sprintf("Temperature effect:          F(%.0f,%.1f) = %.2f, p = %.4f\n",
+            anova_tbl["SetTemperature", "NumDF"],
+            anova_tbl["SetTemperature", "DenDF"],
+            anova_tbl["SetTemperature", "F value"],
+            anova_tbl["SetTemperature", "Pr(>F)"]))
+
+cat(sprintf("Media effect:                F(%.0f,%.1f) = %.2f, p = %.4f\n",
+            anova_tbl["growth_medium", "NumDF"],
+            anova_tbl["growth_medium", "DenDF"],
+            anova_tbl["growth_medium", "F value"],
+            anova_tbl["growth_medium", "Pr(>F)"]))
+
+cat(sprintf("Temperature × Media interaction: F(%.0f,%.1f) = %.2f, p = %.4f\n",
+            anova_tbl["SetTemperature:growth_medium", "NumDF"],
+            anova_tbl["SetTemperature:growth_medium", "DenDF"],
+            anova_tbl["SetTemperature:growth_medium", "F value"],
+            anova_tbl["SetTemperature:growth_medium", "Pr(>F)"]))
