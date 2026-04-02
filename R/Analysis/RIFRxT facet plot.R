@@ -16,7 +16,7 @@ growthAnalysis <- analyseODData(data)
 #LB OD 
 
 data %>%
-  filter(Plate %in% c("RIFxT42", "RIFxT45", "RIFxT48")) %>%
+  filter(Plate %in% c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")) %>%
   filter(!is.na(mutant_ID), mutant_ID != "") %>%
   filter(growth_medium == "LB") %>%
   mutate(
@@ -35,11 +35,11 @@ data %>%
     fun.data = mean_se, geom = "ribbon",
     alpha = 0.15, colour = NA
   ) +
-  scale_colour_manual(values = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
-  scale_fill_manual(values   = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_colour_manual(values = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_fill_manual(values   = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
   facet_grid(SetTemperature ~ mutant_ID) +
   labs(
-    title  = "OD Growth Curves at 42°C vs 45°C vs 48°C in LB",
+    title  = "OD Growth Curves at 37°C vs 42°C vs 45°C vs 48°C in LB",
     x      = "Time (h)",
     y      = "OD (blanked)",
     colour = "Temperature",
@@ -56,7 +56,7 @@ data %>%
 # LB mumax 
 
 growthAnalysis$pars %>%
-  filter(Plate %in% c("RIFxT42", "RIFxT45", "RIFxT48")) %>%
+  filter(Plate %in% c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")) %>%
   filter(!is.na(mutant_ID), mutant_ID != "") %>%
   filter(growth_medium == "LB") %>%
   mutate(
@@ -72,11 +72,11 @@ growthAnalysis$pars %>%
   geom_jitter(width = 0.15, alpha = 0.4, size = 1.2) +
   stat_summary(fun = mean, geom = "crossbar", width = 0.5, linewidth = 0.6, fatten = 1.5) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.25, linewidth = 0.6) +
-  scale_colour_manual(values = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
-  scale_fill_manual(values   = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_colour_manual(values = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_fill_manual(values   = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
   facet_wrap(~ SetTemperature, ncol = 1) +
   labs(
-    title  = "Maximum Growth Rate (µmax) at 42°C, 45°C & 48°C in LB",
+    title  = "Maximum Growth Rate (µmax) at 37°C, 42°C, 45°C & 48°C in LB",
     x      = "Mutant",
     y      = expression(mu[max]~(h^-1)),
     colour = "Temperature",
@@ -93,7 +93,7 @@ growthAnalysis$pars %>%
 #M9 OD
 
 data %>%
-  filter(Plate %in% c("RIFxT42", "RIFxT45", "RIFxT48")) %>%
+  filter(Plate %in% c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")) %>%
   filter(!is.na(mutant_ID), mutant_ID != "") %>%
   filter(growth_medium == "M9gluc") %>%                                  # ← LB → M9
   mutate(
@@ -112,11 +112,11 @@ data %>%
     fun.data = mean_se, geom = "ribbon",
     alpha = 0.15, colour = NA
   ) +
-  scale_colour_manual(values = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
-  scale_fill_manual(values   = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_colour_manual(values = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_fill_manual(values   = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
   facet_grid(SetTemperature ~ mutant_ID) +
   labs(
-    title  = "OD Growth Curves at 42°C vs 45°C vs 48°C in M9",      # ← LB → M9
+    title  = "OD Growth Curves at 37°C, 42°C vs 45°C vs 48°C in M9",      # ← LB → M9
     x      = "Time (h)",
     y      = "OD (blanked)",
     colour = "Temperature",
@@ -133,7 +133,7 @@ data %>%
 #m9 mumax 
 
 growthAnalysis$pars %>%
-  filter(Plate %in% c("RIFxT42", "RIFxT45", "RIFxT48")) %>%
+  filter(Plate %in% c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")) %>%
   filter(!is.na(mutant_ID), mutant_ID != "") %>%
   filter(growth_medium == "M9gluc") %>%
   mutate(
@@ -149,11 +149,11 @@ growthAnalysis$pars %>%
   geom_jitter(width = 0.15, alpha = 0.4, size = 1.2) +
   stat_summary(fun = mean, geom = "crossbar", width = 0.5, linewidth = 0.6, fatten = 1.5) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.25, linewidth = 0.6) +
-  scale_colour_manual(values = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
-  scale_fill_manual(values   = c("42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_colour_manual(values = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
+  scale_fill_manual(values   = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
   facet_wrap(~ SetTemperature, ncol = 1) +
   labs(
-    title  = "Maximum Growth Rate (µmax) at 42°C, 45°C & 48°C in M9gluc",
+    title  = "Maximum Growth Rate (µmax) at 37°C, 42°C, 45°C & 48°C in M9gluc",
     x      = "Mutant",
     y      = expression(mu[max]~(h^-1)),
     colour = "Temperature",

@@ -16,8 +16,7 @@ growthAnalysis <- analyseODData(data)
 
 ### heatmap 
 
-plates_to_include <- c("RIFxT42", "RIFxT45", "RIFxT48")
-
+plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
 p1_heatmap <- data %>%
   filter(Plate %in% plates_to_include,
          !is.na(mutant_ID), mutant_ID != "") %>%
@@ -46,14 +45,10 @@ p1_heatmap <- data %>%
     strip.text      = element_text(face = "bold"),
     legend.position = "right"
   )
-
 print(p1_heatmap)
 
-
-###mumax
-
-plates_to_include <- c("RIFxT42", "RIFxT45", "RIFxT48")
-
+### mumax
+plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
 p1_heatmap_mumax <- growthAnalysis$pars %>%
   filter(Plate %in% plates_to_include,
          !is.na(mutant_ID), mutant_ID != "") %>%
@@ -82,5 +77,4 @@ p1_heatmap_mumax <- growthAnalysis$pars %>%
     strip.text      = element_text(face = "bold"),
     legend.position = "right"
   )
-
 print(p1_heatmap_mumax)
