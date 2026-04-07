@@ -5,6 +5,8 @@ library(lmerTest)
 library(rstatix)
 library(dunn.test)
 
+source("R/plotting.R")
+
 filter <- dplyr::filter
 
 
@@ -18,11 +20,13 @@ shinyPlate(data)
 
 growthAnalysis <- analyseODData(data)
 
-growAnalysis
+growthAnalysis
 
 view(growthAnalysis)
 
 head(growthAnalysis)
+
+plot_maxOD_heatmap(growthAnalysis, "plots/maxOD_heatmap.pdf")
 
 # Bar plot with error bar
 plot_data <- growthAnalysis$means %>%
