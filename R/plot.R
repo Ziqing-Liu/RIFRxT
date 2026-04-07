@@ -1,8 +1,13 @@
 # Various plotting functions
 
 # plotting maxOD as a heatmap:
-plot_maxOD_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL) {
+plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("mumax", "max_od")) {
   #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
+  metric <- match.arg(metric)
+  if (metric == "mumax") {
+    # logic for mumax plot
+  } else {
+  }
   if (is.null(plates_to_include)) {
     plates_to_include <- growthAnalysis$pars |>
       pull(Plate) |>
@@ -16,13 +21,17 @@ plot_maxOD_heatmap <- function(growthAnalysis, file_name, plates_to_include = NU
       SetTemperature = paste0(SetTemperature, "°C")
     ) |>
     group_by(mutant_ID, SetTemperature, growth_medium) |>
-    summarise(max_OD = mean(maxOD, na.rm = TRUE), .groups = "drop")
+    summarise(
+      max_OD = mean(maxOD, na.rm = TRUE),
+      mumax = mean(mumax, na.rm = TRUE),
+      .groups = "drop"
+    )
     
-  p <- ggplot(dat_plot, aes(x = mutant_ID, y = SetTemperature, fill = max_OD)) +
+  p <- ggplot(dat_plot, aes(x = mutant_ID, y = SetTemperature, fill = .data[[if (metric == "mumax") "mumax" else "max_OD"]])) +
     geom_tile(colour = "white", linewidth = 0.5) +
     scale_fill_gradientn(
       colours = colorRampPalette(c("#f7f7f7", "steelblue", "firebrick"))(100),
-      name = "max(OD)"
+      name = if (metric == "mumax") "(mumax)" else "max(OD)"
     ) +
     facet_wrap(~growth_medium, ncol = 1, scales = "free") +
     labs(

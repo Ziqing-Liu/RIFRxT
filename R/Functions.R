@@ -5,7 +5,7 @@ library(lmerTest)
 library(rstatix)
 library(dunn.test)
 
-source("R/plotting.R")
+source("plot.R")
 
 filter <- dplyr::filter
 
@@ -20,15 +20,21 @@ shinyPlate(data)
 
 growthAnalysis <- analyseODData(data)
 
-growthAnalysis
-
 view(growthAnalysis)
 
-head(growthAnalysis)
+#functions
 
-plot_maxOD_heatmap(growthAnalysis, "plots/maxOD_heatmap.pdf")
 
-# Bar plot with error bar
+plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
+
+plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
+
+
+
+
+
+
+### Bar plot with error bar
 plot_data <- growthAnalysis$means %>%
   left_join(growthAnalysis$SEs, by = c("mutant_ID", "growth_medium"), 
             suffix = c("_mean", "_se"))
