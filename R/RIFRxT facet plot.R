@@ -15,19 +15,32 @@ growthAnalysis <- analyseODData(data)
 
 #LB OD 
 
-data %>%
-  filter(Plate %in% c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")) %>%
-  filter(!is.na(mutant_ID), mutant_ID != "") %>%
-  filter(growth_medium == "LB") %>%
-  mutate(
-    mutant_ID      = factor(mutant_ID, levels = c("WT", paste0("M", 1:28))),
-    SetTemperature = paste0(SetTemperature, "°C")
-  ) %>%
-  ggplot(aes(
+plot_OD_facet <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
+  #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
+  metric <- match.arg(metric, choices = c("LB", "M9gluc"))
+  if (metric %in% c("LB", "M9gluc")) {
+  }
+  if (is.null(plates_to_include)) {
+    plates_to_include <- growthAnalysis$pars |>
+      pull(Plate) |>
+      unique()
+  }
+  dat_plot <- growthAnalysis |>
+    pluck("pars") |>
+    filter(Plate %in% plates_to_include) |>
+    mutate(
+      mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
+      SetTemperature = paste0(SetTemperature, "°C")
+    ) |>
+    group_by(mutant_ID, SetTemperature, growth_medium) |>
+    summarise(
+      max_OD = mean(maxOD, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  p <- ggplot(aes(
     x      = Time_h,
     y      = blankedOD,
-    colour = SetTemperature,
-    fill   = SetTemperature,
     group  = interaction(SetTemperature, Well)
   )) +
   stat_summary(fun = mean, geom = "line", linewidth = 0.8) +
@@ -35,16 +48,10 @@ data %>%
     fun.data = mean_se, geom = "ribbon",
     alpha = 0.15, colour = NA
   ) +
-  scale_colour_manual(values = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
-  scale_fill_manual(values   = c("37°C" = "mediumpurple", "42°C" = "steelblue", "45°C" = "firebrick", "48°C" = "darkorange")) +
   facet_grid(SetTemperature ~ mutant_ID) +
-  labs(
-    title  = "OD Growth Curves at 37°C vs 42°C vs 45°C vs 48°C in LB",
-    x      = "Time (h)",
-    y      = "OD (blanked)",
-    colour = "Temperature",
-    fill   = "Temperature"
-  ) +
+    labs(
+      x = NULL, y = NULL
+    ) +
   theme_minimal(base_size = 9) +
   theme(
     axis.text.x     = element_text(angle = 45, hjust = 1, size = 7),
@@ -52,7 +59,11 @@ data %>%
     panel.spacing   = unit(0.3, "lines"),
     legend.position = "none"
   )
-
+  ggsave(file_name, p, height = 8, width = 8)
+  return(p)
+}
+  
+  
 # LB mumax 
 
 growthAnalysis$pars %>%
@@ -166,3 +177,55 @@ growthAnalysis$pars %>%
     panel.spacing   = unit(0.3, "lines"),
     legend.position = "none"
   )
+
+
+
+
+
+plot_OD_facet <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
+  #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
+  metric <- match.arg(metric, choices = c("LB", "M9gluc"))
+  if (metric %in% c("LB", "M9gluc")) {
+  }
+  if (is.null(plates_to_include)) {
+    plates_to_include <- growthAnalysis$pars |>
+      pull(Plate) |>
+      unique()
+  }
+  dat_plot <- growthAnalysis |>
+    pluck("pars") |>
+    filter(Plate %in% plates_to_include) |>
+    mutate(
+      mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
+      SetTemperature = paste0(SetTemperature, "°C")
+    ) |>
+    group_by(mutant_ID, SetTemperature, growth_medium) |>
+    summarise(
+      max_OD = mean(maxOD, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  p <- ggplot(aes(
+    x      = Time_h,
+    y      = blankedOD,
+    group  = interaction(SetTemperature, Well)
+  )) +
+    stat_summary(fun = mean, geom = "line", linewidth = 0.8) +
+    stat_summary(
+      fun.data = mean_se, geom = "ribbon",
+      alpha = 0.15, colour = NA
+    ) +
+    facet_grid(SetTemperature ~ mutant_ID) +
+    labs(
+      x = NULL, y = NULL
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(
+      axis.text.x     = element_text(angle = 45, hjust = 1, size = 7),
+      strip.text      = element_text(size = 8, face = "bold"),
+      panel.spacing   = unit(0.3, "lines"),
+      legend.position = "none"
+    )
+  ggsave(file_name, p, height = 8, width = 8)
+  return(p)
+}

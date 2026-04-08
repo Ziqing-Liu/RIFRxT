@@ -9,25 +9,28 @@ source("plot.R")
 
 filter <- dplyr::filter
 
-
 data <- processODData(specPath="specs", dataPath="data")
 
 qcODData(data, path = "qc")
 
 data <- blankODs(data, method = "fixed", value = 0.05)
 
-shinyPlate(data)
-
 growthAnalysis <- analyseODData(data)
+
+shinyPlate(data)
 
 view(growthAnalysis)
 
-#functions
+###Functions
 
-
+#maxOD and mumax heatmap 
 plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
 
 plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
+
+plot_OD_facet(growthAnalysis, "plots/max_od_plot.pdf", metric = "LB")
+
+
 
 
 

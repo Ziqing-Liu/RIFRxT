@@ -1,6 +1,6 @@
 # Various plotting functions
 
-# plotting maxOD as a heatmap:
+# plotting maxOD or mumax as a heatmap:
 plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("mumax", "max_od")) {
   #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
   metric <- match.arg(metric)
@@ -48,4 +48,56 @@ plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, me
   return(p)
 }
 
+#facet OD
 
+plot_OD_facet <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
+  #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
+  metric <- match.arg(metric, choices = c("LB", "M9gluc"))
+  if (metric %in% c("LB", "M9gluc")) {
+  }
+  if (is.null(plates_to_include)) {
+    plates_to_include <- growthAnalysis$pars |>
+      pull(Plate) |>
+      unique()
+  }
+  
+  dat_plot <- growthAnalysis |>
+    pluck("pars") |>
+    filter(Plate %in% plates_to_include) |>
+    filter(str_detect(growth_medium, regex(paste0("^", metric, "$"), ignore_case = TRUE))) |>
+    mutate(
+      mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
+      SetTemperature = paste0(SetTemperature, "°C")
+    ) |>
+    group_by(mutant_ID, SetTemperature, growth_medium) |>
+    summarise(
+      max_OD = mean(maxOD, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  p <- ggplot(dat_plot, aes(
+    x      = Time_h,
+    y      = maxOD,
+    group  = interaction(SetTemperature, Well)
+  )) +
+    stat_summary(fun = mean, geom = "line", linewidth = 0.8) +
+    stat_summary(
+      fun.data = mean_se, geom = "ribbon",
+      alpha = 0.15, colour = NA
+    ) +
+    facet_grid(SetTemperature ~ mutant_ID) +
+    labs(
+      x = NULL, y = NULL
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(
+      axis.text.x     = element_text(angle = 45, hjust = 1, size = 7),
+      strip.text      = element_text(size = 8, face = "bold"),
+      panel.spacing   = unit(0.3, "lines"),
+      legend.position = "none"
+    )
+  ggsave(file_name, p, height = 8, width = 8)
+  return(p)
+}
+
+growthAnalysis$pars |> names()
