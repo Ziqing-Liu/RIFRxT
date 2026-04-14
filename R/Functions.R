@@ -21,7 +21,7 @@ view(growthAnalysis)
 
 view(data)
 
-names(growthAnalysis)
+names(growthAnalysis$pars)
 
 source("plot.R")
 

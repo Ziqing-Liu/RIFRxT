@@ -80,7 +80,7 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
     y      = max_OD,
     group  = mutant_ID,
   )) +
-    geom_line(linewidth = 0.2) +
+    geom_line() +
     facet_grid(SetTemperature ~ mutant_ID) + 
     labs(
       x     = NULL,
