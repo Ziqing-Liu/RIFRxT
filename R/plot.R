@@ -50,44 +50,41 @@ plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, me
 
 #facet OD
 
-plot_OD_facet <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
+plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
   #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
   metric <- match.arg(metric, choices = c("LB", "M9gluc"))
   if (metric %in% c("LB", "M9gluc")) {
   }
   if (is.null(plates_to_include)) {
-    plates_to_include <- growthAnalysis$pars |>
+    plates_to_include <- data |>
       pull(Plate) |>
       unique()
   }
   
-  dat_plot <- growthAnalysis |>
-    pluck("pars") |>
+  dat_facet <- data |>
     filter(Plate %in% plates_to_include) |>
     filter(str_detect(growth_medium, regex(paste0("^", metric, "$"), ignore_case = TRUE))) |>
     mutate(
       mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
       SetTemperature = paste0(SetTemperature, "°C")
     ) |>
-    group_by(mutant_ID, SetTemperature, growth_medium) |>
+    filter(!is.na(mutant_ID)) |>
+    group_by(mutant_ID, SetTemperature, growth_medium, Time_h) |>
     summarise(
-      max_OD = mean(maxOD, na.rm = TRUE),
+      max_OD = mean(blankedOD, na.rm = TRUE),
       .groups = "drop"
     )
   
-  p <- ggplot(dat_plot, aes(
+  q <- ggplot(dat_facet, aes(
     x      = Time_h,
-    y      = maxOD,
-    group  = interaction(SetTemperature, Well)
+    y      = max_OD,
+    group  = mutant_ID,
   )) +
-    stat_summary(fun = mean, geom = "line", linewidth = 0.8) +
-    stat_summary(
-      fun.data = mean_se, geom = "ribbon",
-      alpha = 0.15, colour = NA
-    ) +
-    facet_grid(SetTemperature ~ mutant_ID) +
+    geom_line(linewidth = 0.2) +
+    facet_grid(SetTemperature ~ mutant_ID) + 
     labs(
-      x = NULL, y = NULL
+      x     = NULL,
+      y     = "OD (blanked)",
     ) +
     theme_minimal(base_size = 9) +
     theme(
@@ -96,8 +93,9 @@ plot_OD_facet <- function(growthAnalysis, file_name, plates_to_include = NULL, m
       panel.spacing   = unit(0.3, "lines"),
       legend.position = "none"
     )
-  ggsave(file_name, p, height = 8, width = 8)
-  return(p)
+  ggsave(file_name, q, height = 8, width = 8)
+  return(q)
 }
 
-growthAnalysis$pars |> names()
+
+
