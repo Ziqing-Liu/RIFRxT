@@ -32,9 +32,9 @@ plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
 
 plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
 
-plot_OD_facet(data, "plots/max_od_plot.pdf", metric = "LB")
+plot_OD_facet(data, "plots/LB_plot.pdf", metric = "LB")
 
-plot_OD_facet(data, "plots/max_od_plot.pdf", metric = "M9gluc")
+plot_OD_facet(data, "plots/M9_plot.pdf", metric = "M9gluc")
 
 ### Bar plot with error bar
 plot_data <- growthAnalysis$means %>%

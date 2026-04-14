@@ -51,10 +51,8 @@ plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, me
 #facet OD
 
 plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
-  #plates_to_include <- c("RIFxT37", "RIFxT42", "RIFxT45", "RIFxT48")
   metric <- match.arg(metric, choices = c("LB", "M9gluc"))
-  if (metric %in% c("LB", "M9gluc")) {
-  }
+  
   if (is.null(plates_to_include)) {
     plates_to_include <- data |>
       pull(Plate) |>
@@ -68,23 +66,19 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
       mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
       SetTemperature = paste0(SetTemperature, "°C")
     ) |>
-    filter(!is.na(mutant_ID)) |>
-    group_by(mutant_ID, SetTemperature, growth_medium, Time_h) |>
-    summarise(
-      max_OD = mean(blankedOD, na.rm = TRUE),
-      .groups = "drop"
-    )
+    filter(!is.na(mutant_ID))
+  # ← no group_by or summarise, keep all raw replicate rows
   
   q <- ggplot(dat_facet, aes(
-    x      = Time_h,
-    y      = max_OD,
-    group  = mutant_ID,
+    x     = Time_h,
+    y     = blankedOD,                        # ← raw OD column
+    group = interaction(Well, Plate),          # ← one line per well per plate
   )) +
-    geom_line() +
-    facet_grid(SetTemperature ~ mutant_ID) + 
+    geom_line(linewidth = 0.3, alpha = 0.5) +   # ← thin + transparent for replicates
+    facet_grid(SetTemperature ~ mutant_ID) +
     labs(
-      x     = NULL,
-      y     = "OD (blanked)",
+      x = "Time (h)",
+      y = "OD (blanked)",
     ) +
     theme_minimal(base_size = 9) +
     theme(
@@ -93,9 +87,8 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
       panel.spacing   = unit(0.3, "lines"),
       legend.position = "none"
     )
-  ggsave(file_name, q, height = 8, width = 8)
+  
+  ggsave(file_name, q, height = 8, width = 16, create.dir = TRUE)
   return(q)
 }
-
-
 
