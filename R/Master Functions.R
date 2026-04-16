@@ -5,6 +5,8 @@ library(lmerTest)
 library(rstatix)
 library(dunn.test)
 
+source("R/Code for Functions.R")
+
 filter <- dplyr::filter
 
 data <- processODData(specPath="specs", dataPath="data")
@@ -23,8 +25,6 @@ view(data)
 
 names(growthAnalysis$pars)
 
-source("plot.R")
-
 ###Functions
 
 #maxOD and mumax heatmap 
@@ -32,9 +32,26 @@ plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
 
 plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
 
+#Gowth curve measured with OD for LB and M9
 plot_OD_facet(data, "plots/LB_plot.pdf", metric = "LB")
 
 plot_OD_facet(data, "plots/M9_plot.pdf", metric = "M9gluc")
+
+#Facet wrap looking at the OD level of each mutant at each temperature 
+plot_facet_wrap(growthAnalysis, "plots/LB_OD_wrap.pdf", metric = "LB")
+
+plot_facet_wrap(growthAnalysis, "plots/M9_OD_wrap.pdf", metric = "M9gluc")
+
+#Facet wrap looking at the mumax of each mutant at each temperature 
+plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", metric = "LB", response = "mumax")
+
+plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", metric = "M9", response = "mumax")
+
+
+
+
+
+
 
 ### Bar plot with error bar
 plot_data <- growthAnalysis$means %>%
