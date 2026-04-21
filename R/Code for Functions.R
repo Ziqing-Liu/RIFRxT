@@ -96,7 +96,7 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
 plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL, 
                             metric = c("LB", "M9gluc"),
                             response = c("maxOD", "mumax")) {
-  metric <- match.arg(metric, choices = c("LB", "M9gluc"))
+  metric <- match.arg(metric)
   response <- match.arg(response)
   
   if (is.null(plates_to_include)) {
@@ -117,7 +117,6 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     summarise(
       maxOD = mean(maxOD, na.rm = TRUE),
       mumax = mean(mumax, na.rm = TRUE),
-      .groups = "drop"
     )
   
   y_lab <- if (response == "maxOD") "OD (blanked)" else "Maximum growth rate (mumax)"
@@ -128,7 +127,7 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     group = interaction(Replicate, mutant_ID)
   )) +
     geom_line(linewidth = 0.3, alpha = 0.5) +
-    facet_wrap(~ mutant_ID) +          # one panel per mutant, temps on x-axis
+    facet_wrap(~ mutant_ID) +          
     labs(x = "Temperature (°C)", y = y_lab) +
     theme_minimal(base_size = 9) +
     theme(
