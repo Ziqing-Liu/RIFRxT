@@ -70,7 +70,7 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
   q <- ggplot(dat_facet, aes(
     x     = Time_h,
     y     = blankedOD,                        # ← raw OD column
-    group = interaction(Well, Plate),          # ← one line per well per plate
+    group = Replicate,          # ← one line per well per plate
   )) +
     geom_line(linewidth = 0.3, alpha = 0.5) +   # ← thin + transparent for replicates
     facet_grid(SetTemperature ~ mutant_ID) +

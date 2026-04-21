@@ -15,7 +15,7 @@ qcODData(data, path = "qc")
 
 data <- blankODs(data, method = "fixed", value = 0.05)
 
-growthAnalysis <- analyseODData(data)
+growthAnalysis <- analyseODData(data, h = 20)
 
 shinyPlate(data)
 
