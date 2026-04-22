@@ -49,8 +49,8 @@ plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, me
 
 #facet OD
 
-plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c("LB", "M9gluc")) {
-  metric <- match.arg(metric, choices = c("LB", "M9gluc"))
+plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_media = c("LB", "M9gluc")) {
+  growth_media <- match.arg(growth_media, choices = c("LB", "M9gluc"))
   
   if (is.null(plates_to_include)) {
     plates_to_include <- data |>
@@ -60,7 +60,7 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
   
   dat_facet <- data |>
     filter(Plate %in% plates_to_include) |>
-    filter(str_detect(growth_medium, regex(paste0("^", metric, "$"), ignore_case = TRUE))) |>
+    filter(str_detect(growth_medium, regex(paste0("^", growth_media, "$"), ignore_case = TRUE))) |>
     mutate(
       mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
       SetTemperature = paste0(SetTemperature, "°C")
@@ -69,14 +69,14 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
   
   q <- ggplot(dat_facet, aes(
     x     = Time_h,
-    y     = blankedOD,                        # ← raw OD column
-    group = Replicate,          # ← one line per well per plate
+    y     = blankedOD,                        
+    group = Replicate,          
   )) +
-    geom_line(linewidth = 0.3, alpha = 0.5) +   # ← thin + transparent for replicates
+    geom_line(linewidth = 0.3, alpha = 0.5) +  
     facet_grid(SetTemperature ~ mutant_ID) +
     labs(
       x = "Time (h)",
-      y = "OD (blanked)",
+      y = paste0("OD (blanked) - ", growth_media),  
     ) +
     theme_minimal(base_size = 9) +
     theme(
@@ -94,10 +94,11 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, metric = c(
 #facet wrap plot 
 
 plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL, 
-                            metric = c("LB", "M9gluc"),
-                            response = c("maxOD", "mumax")) {
+                            growth_media = c("LB", "M9gluc"),
+                            metric = c("maxOD", "mumax"),
+                            label_map = NULL) {
+  growth_media <- match.arg(growth_media)
   metric <- match.arg(metric)
-  response <- match.arg(response)
   
   if (is.null(plates_to_include)) {
     plates_to_include <- growthAnalysis$par |>
@@ -108,25 +109,43 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
   dat_wrap <- growthAnalysis |>
     pluck("pars") |>
     filter(Plate %in% plates_to_include) |>
-    filter(growth_medium == metric) |>
+    filter(growth_medium == growth_media) |>
     mutate(
       mutant_ID      = fct(mutant_ID, levels = c("WT", paste0("M", 1:28))),
-      SetTemperature = as.numeric(SetTemperature)
+      SetTemperature = as.numeric(SetTemperature),
+      mutant_ID      = if (!is.null(label_map)) fct_recode(mutant_ID, !!!label_map) else mutant_ID
     ) |>
     group_by(mutant_ID, Replicate, SetTemperature) |>
     summarise(
       maxOD = mean(maxOD, na.rm = TRUE),
       mumax = mean(mumax, na.rm = TRUE),
+      .groups = "drop"
     )
   
-  y_lab <- if (response == "maxOD") "OD (blanked)" else "Maximum growth rate (mumax)"
+  dat_mean <- dat_wrap |>
+    group_by(mutant_ID, SetTemperature) |>
+    summarise(
+      mean_metric = mean(.data[[metric]], na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  y_lab <- if (metric == "maxOD") {
+    paste0("OD (blanked) - ", growth_media)
+  } else {
+    paste0("Maximum growth rate (mumax) - ", growth_media)
+  }
   
   r <- ggplot(dat_wrap, aes(
     x     = SetTemperature,
-    y     = .data[[response]],
+    y     = .data[[metric]],
     group = interaction(Replicate, mutant_ID)
   )) +
     geom_line(linewidth = 0.3, alpha = 0.5) +
+    geom_line(
+      data = dat_mean,
+      aes(x = SetTemperature, y = mean_metric, group = mutant_ID),
+      linewidth = 1, colour = "red", inherit.aes = FALSE
+    ) +
     facet_wrap(~ mutant_ID) +          
     labs(x = "Temperature (°C)", y = y_lab) +
     theme_minimal(base_size = 9) +
@@ -140,8 +159,8 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
   return(r)
 }
   
-
-
+labels_df <- read.csv("design/mutation_names.csv")
+my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 
 
 

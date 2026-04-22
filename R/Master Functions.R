@@ -17,13 +17,6 @@ data <- blankODs(data, method = "fixed", value = 0.05)
 
 growthAnalysis <- analyseODData(data, h = 20)
 
-shinyPlate(data)
-
-view(growthAnalysis)
-
-view(data)
-
-names(growthAnalysis$pars)
 
 ###Functions
 
@@ -32,74 +25,35 @@ plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
 
 plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
 
-#Gowth curve measured with OD for LB and M9
-plot_OD_facet(data, "plots/LB_plot.pdf", metric = "LB")
+#Growth curve measured with OD for LB and M9
+plot_OD_facet(data, "plots/LB_plot.pdf", growth_media = "LB")
 
-plot_OD_facet(data, "plots/M9_plot.pdf", metric = "M9gluc")
+plot_OD_facet(data, "plots/M9_plot.pdf", growth_media = "M9gluc")
 
 #Facet wrap looking at the OD level of each mutant at each temperature 
-plot_facet_wrap(growthAnalysis, "plots/LB_OD_wrap.pdf", metric = "LB")
 
-plot_facet_wrap(growthAnalysis, "plots/M9_OD_wrap.pdf", metric = "M9gluc")
+plot_facet_wrap(growthAnalysis, "plots/LB_OD_wrap.pdf", growth_media = "LB", label_map = my_labels)
+
+plot_facet_wrap(growthAnalysis, "plots/M9_OD_wrap.pdf", growth_media = "M9gluc", label_map = my_labels)
 
 #Facet wrap looking at the mumax of each mutant at each temperature 
-plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", metric = "LB", response = "mumax")
+plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", growth_media = "LB", metric = "mumax", label_map = my_labels)
 
-plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", metric = "M9", response = "mumax")
-
-
+plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", metric = "mumax", label_map = my_labels)
 
 
+### view
+
+shinyPlate(data)
+
+view(growthAnalysis)
+
+view(data)
+
+names(growthAnalysis$pars)
 
 
 
-### Bar plot with error bar
-plot_data <- growthAnalysis$means %>%
-  left_join(growthAnalysis$SEs, by = c("mutant_ID", "growth_medium"), 
-            suffix = c("_mean", "_se"))
-
-ggplot(plot_data, aes(x = mutant_ID, y = mumax_mean, fill = growth_medium)) +
-  geom_col(position = "dodge") +
-  geom_errorbar(aes(ymin = mumax_mean - mumax_se, 
-                    ymax = mumax_mean + mumax_se),
-                position = position_dodge(0.9), width = 0.25) +
-  labs(title = "Maximum Growth Rate by Mutant",
-       x = "Mutant", y = "mumax (per min)", fill = "Media") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-#faceted plot looking at all 4 attribute at once 
-growthAnalysis$means %>%
-  pivot_longer(cols = c(mumax, lag, r2, maxOD), 
-               names_to = "parameter", values_to = "value") %>%
-  ggplot(aes(x = mutant_ID, y = value, colour = growth_medium, group = growth_medium)) +
-  geom_point() +
-  geom_line() +
-  facet_wrap(~parameter, scales = "free_y") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-#mutant growth vs wildtype 
-wt_means <- growthAnalysis$means %>% filter(mutant_ID == "WT")
-
-growthAnalysis$means %>%
-  left_join(wt_means, by = "growth_medium", suffix = c("", "_WT")) %>%
-  mutate(relative_mumax = mumax / mumax_WT) %>%
-  ggplot(aes(x = mutant_ID, y = relative_mumax, fill = growth_medium)) +
-  geom_col(position = "dodge") +
-  geom_hline(yintercept = 1, linetype = "dashed", colour = "red") +
-  labs(title = "Growth Rate Relative to WT",
-       y = "mumax / mumax_WT", x = "Mutant") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggplot(growthAnalysis$means, aes(x = mutant_ID, y = r2, fill = growth_medium)) +
-  geom_col(position = "dodge") +
-  geom_hline(yintercept = 0.9, linetype = "dashed", colour = "red") +
-  labs(title = "Model Fit (R²) by Mutant and Media",
-       x = "Mutant", y = "R²", fill = "Media") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 
