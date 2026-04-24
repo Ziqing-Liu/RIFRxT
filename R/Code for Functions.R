@@ -162,8 +162,38 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
 labels_df <- read.csv("design/mutation_names.csv")
 my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 
+### auto correlation 
+
+auto <- data |>
+  filter(mutant_ID == "M23", as.integer(Temperature) == 37L, Replicate == 1, growth_medium == "M9gluc") |>
+  pull(OD) |> #plot(type = "l")
+  acf(plot = FALSE)
+
+auto$acf[2, 1, 1]
 
 
+acf_df <- with(auto, data.frame(lag = lag[,,1], acf = acf[,,1]))
+
+ggplot(acf_df, aes(x = lag, y = acf)) +
+  geom_hline(aes(yintercept = 0)) +
+  geom_segment(aes(xend = lag, yend = 0)) +
+  geom_hline(
+    yintercept = c(1, -1) * qnorm(0.975) / sqrt(auto$n.used),
+    linetype = "dashed", color = "blue"
+  ) +
+  labs(title = "ACF of OD", x = "Lag", y = "ACF")
+
+###
+data |>
+  filter(as.integer(Temperature) == 37L) |>
+  ggplot(aes(x = Time_h, y = blankedOD, colour = mutant_ID, group = interaction(mutant_ID, Replicate))) +
+  geom_line(alpha = 0.6) +
+  facet_wrap(~ growth_medium) +
+  labs(title = "OD Growth Curves at 37°C",
+       x = "Time",
+       y = "OD",
+       colour = "Mutant") +
+  theme_bw()
 
 
 
