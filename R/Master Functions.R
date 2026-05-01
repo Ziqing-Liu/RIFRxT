@@ -1,9 +1,5 @@
 library(tidyverse)
 library(grow96)
-library(lme4)
-library(lmerTest)
-library(rstatix)
-library(dunn.test)
 
 source("R/Code for Functions.R")
 
@@ -52,7 +48,7 @@ view(data)
 
 names(growthAnalysis$pars)
 
-
+filter <- dplyr::filter
 
 
 
