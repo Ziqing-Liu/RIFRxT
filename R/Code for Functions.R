@@ -67,6 +67,17 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_medi
     ) |>
     filter(!is.na(mutant_ID))
   
+  good_curves <- dat_facet |>
+    group_by(mutant_ID, Temperature, Replicate, growth_medium) |>
+    summarise(
+      lag1_acf = if (n() < 3) NA_real_ else acf(OD, lag.max = 1, plot = FALSE)$acf[2, 1, 1],
+      .groups = "drop"
+    ) |>
+    filter(!is.na(lag1_acf), lag1_acf >= 0.90)
+  
+  dat_facet <- dat_facet |>
+    semi_join(good_curves, by = c("mutant_ID", "Temperature", "Replicate", "growth_medium"))
+  
   q <- ggplot(dat_facet, aes(
     x     = Time_h,
     y     = blankedOD,                        
@@ -162,39 +173,134 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
 labels_df <- read.csv("design/mutation_names.csv")
 my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 
-### auto correlation 
 
-auto <- data |>
-  filter(mutant_ID == "M23", as.integer(Temperature) == 37L, Replicate == 1, growth_medium == "M9gluc") |>
-  pull(OD) |> #plot(type = "l")
-  acf(plot = FALSE)
-
-auto$acf[2, 1, 1]
+#auto correlation 
 
 
-acf_df <- with(auto, data.frame(lag = lag[,,1], acf = acf[,,1]))
-
-ggplot(acf_df, aes(x = lag, y = acf)) +
-  geom_hline(aes(yintercept = 0)) +
-  geom_segment(aes(xend = lag, yend = 0)) +
-  geom_hline(
-    yintercept = c(1, -1) * qnorm(0.975) / sqrt(auto$n.used),
-    linetype = "dashed", color = "blue"
-  ) +
-  labs(title = "ACF of OD", x = "Lag", y = "ACF")
-
-###
-data |>
-  filter(as.integer(Temperature) == 37L) |>
-  ggplot(aes(x = Time_h, y = blankedOD, colour = mutant_ID, group = interaction(mutant_ID, Replicate))) +
-  geom_line(alpha = 0.6) +
-  facet_wrap(~ growth_medium) +
-  labs(title = "OD Growth Curves at 37°C",
-       x = "Time",
-       y = "OD",
-       colour = "Mutant") +
-  theme_bw()
-
-
-
+#Significance test 
+analyse_pars_by_temperature <- function(growthAnalysis,
+                                        plates_to_include = NULL,
+                                        growth_media      = NULL,
+                                        parameter         = c("maxOD", "mumax", "lag"),
+                                        p_adjust_method   = "bonferroni",
+                                        fdr_method        = "BH",
+                                        fdr_threshold     = 0.05) {
+  
+  # ── 1. Extract $pars if full growthAnalysis object is passed ──────────────── 
+  if (is.list(growthAnalysis) && "pars" %in% names(growthAnalysis)) {
+    cat("\n── Extracting $pars from growthAnalysis ──\n")
+    dat <- growthAnalysis$pars
+  } else {
+    dat <- growthAnalysis
+  }
+  
+  # ── 2. Validate parameter column ─────────────────────────────────────────────
+  parameter <- match.arg(parameter)
+  if (!parameter %in% names(dat)) {
+    stop(paste0("Column '", parameter, "' not found in $pars.\n",
+                "Available columns: ", paste(names(dat), collapse = ", ")))
+  }
+  cat(paste0("\n── Testing parameter: '", parameter, "' ──\n"))
+  
+  # ── 3. Auto-detect or filter plates ──────────────────────────────────────────
+  if (is.null(plates_to_include)) {
+    plates_to_include <- dat |> pull(Plate) |> unique()
+    cat("\n── Plates detected from growthAnalysis$pars ──\n")
+    print(plates_to_include)
+  } else {
+    cat("\n── Using manually specified plates ──\n")
+    print(plates_to_include)
+  }
+  
+  dat <- dat |> dplyr::filter(Plate %in% plates_to_include)
+  
+  # ── 4. Filter growth media ────────────────────────────────────────────────────
+  if (!is.null(growth_media)) {
+    dat <- dat |> dplyr::filter(growth_medium %in% growth_media)
+  }
+  
+  # ── 5. Remove missing mutants ─────────────────────────────────────────────────
+  dat <- dat |> dplyr::filter(!is.na(mutant_ID), mutant_ID != "")
+  
+  # ── 6. Derive temperature levels dynamically ──────────────────────────────────
+  temp_levels <- dat |>
+    pull(SetTemperature) |>
+    unique() |>
+    as.numeric() |>
+    sort() |>
+    as.character()
+  
+  n_temps <- length(temp_levels)
+  cat(paste0("\n── Temperatures detected: ", paste(temp_levels, collapse = ", "), " ──\n"))
+  
+  # ── 7. Factorise and standardise ──────────────────────────────────────────────
+  dat <- dat |>
+    mutate(
+      mutant_ID      = factor(mutant_ID, levels = c("WT", paste0("M", 1:28))),
+      SetTemperature = factor(as.numeric(as.character(SetTemperature)),
+                              levels = as.numeric(temp_levels)),
+      .parameter     = .data[[parameter]]
+    )
+  
+  cat("\n── Data glimpse ──\n")
+  glimpse(dat)
+  
+  # ── 8. Kruskal-Wallis ─────────────────────────────────────────────────────────
+  kw_results <- dat |>
+    group_by(growth_medium) |>
+    kruskal_test(.parameter ~ SetTemperature)
+  
+  cat("\n── Kruskal-Wallis Results ──\n")
+  print(kw_results)
+  
+  # ── 9. Dunn post-hoc (3+ temperatures only) ───────────────────────────────── 
+  dunn_results <- NULL
+  if (n_temps >= 3) {
+    dunn_results <- dat |>
+      group_by(growth_medium) |>
+      dunn_test(.parameter ~ SetTemperature, p.adjust.method = p_adjust_method)
+    
+    cat("\n── Dunn Post-Hoc Results ──\n")
+    print(dunn_results)
+  } else {
+    cat("\n── Dunn post-hoc skipped: fewer than 3 temperatures ──\n")
+  }
+  
+  # ── 10. Effect size ───────────────────────────────────────────────────────────
+  effect_size <- dat |>
+    group_by(growth_medium) |>
+    kruskal_effsize(.parameter ~ SetTemperature)
+  
+  cat("\n── Effect Size (epsilon-squared) ──\n")
+  print(effect_size)
+  
+  # ── 11. Per-mutant Kruskal-Wallis ─────────────────────────────────────────────
+  kw_per_mutant <- dat |>
+    group_by(mutant_ID, growth_medium) |>
+    dplyr::filter(n_distinct(SetTemperature) == n_temps) |>
+    kruskal_test(.parameter ~ SetTemperature) |>
+    adjust_pvalue(method = fdr_method) |>
+    add_significance()
+  
+  sig_mutants <- kw_per_mutant |>
+    dplyr::filter(p.adj < fdr_threshold) |>
+    select(mutant_ID, growth_medium, statistic, p, p.adj, p.adj.signif)
+  
+  cat(paste0("\n── Mutants significantly affected by temperature (FDR < ",
+             fdr_threshold, ") ──\n"))
+  print(sig_mutants)
+  
+  # ── 12. Return all results ────────────────────────────────────────────────────
+  invisible(list(
+    data            = dat,
+    kw_results      = kw_results,
+    dunn_results    = dunn_results,
+    effect_size     = effect_size,
+    kw_per_mutant   = kw_per_mutant,
+    sig_mutants     = sig_mutants,
+    plates_detected = plates_to_include,
+    temps_detected  = temp_levels,
+    parameter       = parameter
+  ))
+}
 

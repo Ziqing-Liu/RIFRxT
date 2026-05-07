@@ -1,5 +1,6 @@
 library(tidyverse)
 library(grow96)
+library(rstatix)
 
 source("R/Code for Functions.R")
 
@@ -37,8 +38,29 @@ plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", growth_media = "LB", 
 
 plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", metric = "mumax", label_map = my_labels)
 
+#Test max OD 
+results_maxOD <- analyse_pars_by_temperature(
+  growthAnalysis = growthAnalysis,
+  parameter      = "maxOD"
+)
+
+# Test growth rate
+results_mumax <- analyse_pars_by_temperature(
+  growthAnalysis = growthAnalysis,
+  parameter      = "mumax"
+)
+
+# Test lag time, LB only
+results_lag <- analyse_pars_by_temperature(
+  growthAnalysis = growthAnalysis,
+  parameter      = "lag",
+)
 
 ### view
+
+results_maxOD$sig_mutants
+results_maxOD$dunn_results
+results_maxOD$effect_size
 
 shinyPlate(data)
 
