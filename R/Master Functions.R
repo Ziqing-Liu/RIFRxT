@@ -1,6 +1,7 @@
 library(tidyverse)
 library(grow96)
 library(rstatix)
+library(outliers)
 
 source("R/Code for Functions.R")
 
@@ -38,23 +39,46 @@ plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", growth_media = "LB", 
 
 plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", metric = "mumax", label_map = my_labels)
 
-#Test max OD 
-results_maxOD <- analyse_pars_by_temperature(
-  growthAnalysis = growthAnalysis,
-  parameter      = "maxOD"
+#Sig test across multiple mutants at the same temperature  
+results <- compareMutants(
+  growthData       = growthAnalysis$pars,
+  param            = "maxOD",
+  strainsToCompare = c("M12","M1"),  
+  media            = c("LB"),
+  temperatures     = c(45),
+  removeOutliers   = 
 )
 
-# Test growth rate
-results_mumax <- analyse_pars_by_temperature(
-  growthAnalysis = growthAnalysis,
-  parameter      = "mumax"
+# sig test for LB (change test strains to NULL to include all mutants)(change maxOD to mumax based on need)print(results_all_LB, n = Inf)
+results_all_LB <- compareGrowthGroups(
+  growthData        = growthAnalysis$pars,
+  param             = "maxOD",
+  baselineStrain    = "M1",
+  baselineMedium    = "LB",
+  baselineTemp      = 45,
+  testMedium        = "LB",
+  testTemp          = 45,
+  testStrains       = "M12",
+  testType          = "parametric",  
+  pAdjMethod        = "BH"
 )
 
-# Test lag time, LB only
-results_lag <- analyse_pars_by_temperature(
-  growthAnalysis = growthAnalysis,
-  parameter      = "lag",
+# Sig test for M9_gluc (change test strains to NULL to include all mutants)(change maxOD to mumax based on need)
+results_all_M9_gluc <- compareGrowthGroups(
+  growthData        = growthAnalysis$pars,
+  param             = "maxOD",
+  baselineStrain    = "M12",
+  baselineMedium    = "LB",
+  baselineTemp      = 45,
+  testMedium        = "LB",
+  testTemp          = 45,
+  testStrains       = NULL,
+  testType          = "parametric",  
+  pAdjMethod        = "BH"
 )
+
+grubbs.test(c(0.7001, 0.8187))
+
 
 ### view
 

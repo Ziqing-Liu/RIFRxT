@@ -67,21 +67,10 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_medi
     ) |>
     filter(!is.na(mutant_ID))
   
-  good_curves <- dat_facet |>
-    group_by(mutant_ID, Temperature, Replicate, growth_medium) |>
-    summarise(
-      lag1_acf = if (n() < 3) NA_real_ else acf(OD, lag.max = 1, plot = FALSE)$acf[2, 1, 1],
-      .groups = "drop"
-    ) |>
-    filter(!is.na(lag1_acf), lag1_acf >= 0.90)
-  
-  dat_facet <- dat_facet |>
-    semi_join(good_curves, by = c("mutant_ID", "Temperature", "Replicate", "growth_medium"))
-  
   q <- ggplot(dat_facet, aes(
     x     = Time_h,
     y     = blankedOD,                        
-    group = Replicate,          
+    group = interaction(Plate, Well, Replicate),          
   )) +
     geom_line(linewidth = 0.3, alpha = 0.5) +  
     facet_grid(SetTemperature ~ mutant_ID) +
@@ -177,130 +166,380 @@ my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 #auto correlation 
 
 
-#Significance test 
-analyse_pars_by_temperature <- function(growthAnalysis,
-                                        plates_to_include = NULL,
-                                        growth_media      = NULL,
-                                        parameter         = c("maxOD", "mumax", "lag"),
-                                        p_adjust_method   = "bonferroni",
-                                        fdr_method        = "BH",
-                                        fdr_threshold     = 0.05) {
+#Significance test between same mutant accross different temp 
+compareMutants <- function(
+    growthData,
+    param            = "maxOD",
+    strainCol        = "mutant_ID",
+    mediumCol        = "growth_medium",
+    tempCol          = "SetTemperature",
+    strainsToCompare = NULL,
+    media            = c("LB", "M9gluc"),
+    temperatures     = NULL,
+    pAdjMethod       = "BH",
+    alpha            = 0.05,
+    removeOutliers   = TRUE,   # TRUE = auto-remove Grubbs outliers
+    grubbsAlpha      = 0.05,   # significance threshold for Grubbs test
+    verbose          = TRUE
+) {
   
-  # ── 1. Extract $pars if full growthAnalysis object is passed ──────────────── 
-  if (is.list(growthAnalysis) && "pars" %in% names(growthAnalysis)) {
-    cat("\n── Extracting $pars from growthAnalysis ──\n")
-    dat <- growthAnalysis$pars
-  } else {
-    dat <- growthAnalysis
+  library(outliers)
+  
+  # ── 1. Validate ──────────────────────────────────────────────────────────────
+  required_cols <- c(strainCol, mediumCol, tempCol, param)
+  missing_cols  <- setdiff(required_cols, names(growthData))
+  if (length(missing_cols) > 0)
+    stop(paste("Missing columns:", paste(missing_cols, collapse = ", ")))
+  
+  df <- growthData %>%
+    rename(
+      .strain = all_of(strainCol),
+      .medium = all_of(mediumCol),
+      .temp   = all_of(tempCol),
+      .param  = all_of(param)
+    ) %>%
+    filter(!is.na(.param), .medium %in% media)
+  
+  if (!is.null(temperatures))
+    df <- df %>% filter(.temp %in% temperatures)
+  
+  if (!is.null(strainsToCompare)) {
+    missing_strains <- setdiff(strainsToCompare, unique(df$.strain))
+    if (length(missing_strains) > 0)
+      warning(paste("Strains not found:", paste(missing_strains, collapse = ", ")))
+    df <- df %>% filter(.strain %in% strainsToCompare)
   }
   
-  # ── 2. Validate parameter column ─────────────────────────────────────────────
-  parameter <- match.arg(parameter)
-  if (!parameter %in% names(dat)) {
-    stop(paste0("Column '", parameter, "' not found in $pars.\n",
-                "Available columns: ", paste(names(dat), collapse = ", ")))
-  }
-  cat(paste0("\n── Testing parameter: '", parameter, "' ──\n"))
+  available_strains <- unique(df$.strain)
+  if (length(available_strains) < 2)
+    stop("Need at least 2 strains to compare.")
   
-  # ── 3. Auto-detect or filter plates ──────────────────────────────────────────
-  if (is.null(plates_to_include)) {
-    plates_to_include <- dat |> pull(Plate) |> unique()
-    cat("\n── Plates detected from growthAnalysis$pars ──\n")
-    print(plates_to_include)
-  } else {
-    cat("\n── Using manually specified plates ──\n")
-    print(plates_to_include)
-  }
-  
-  dat <- dat |> dplyr::filter(Plate %in% plates_to_include)
-  
-  # ── 4. Filter growth media ────────────────────────────────────────────────────
-  if (!is.null(growth_media)) {
-    dat <- dat |> dplyr::filter(growth_medium %in% growth_media)
-  }
-  
-  # ── 5. Remove missing mutants ─────────────────────────────────────────────────
-  dat <- dat |> dplyr::filter(!is.na(mutant_ID), mutant_ID != "")
-  
-  # ── 6. Derive temperature levels dynamically ──────────────────────────────────
-  temp_levels <- dat |>
-    pull(SetTemperature) |>
-    unique() |>
-    as.numeric() |>
-    sort() |>
-    as.character()
-  
-  n_temps <- length(temp_levels)
-  cat(paste0("\n── Temperatures detected: ", paste(temp_levels, collapse = ", "), " ──\n"))
-  
-  # ── 7. Factorise and standardise ──────────────────────────────────────────────
-  dat <- dat |>
-    mutate(
-      mutant_ID      = factor(mutant_ID, levels = c("WT", paste0("M", 1:28))),
-      SetTemperature = factor(as.numeric(as.character(SetTemperature)),
-                              levels = as.numeric(temp_levels)),
-      .parameter     = .data[[parameter]]
-    )
-  
-  cat("\n── Data glimpse ──\n")
-  glimpse(dat)
-  
-  # ── 8. Kruskal-Wallis ─────────────────────────────────────────────────────────
-  kw_results <- dat |>
-    group_by(growth_medium) |>
-    kruskal_test(.parameter ~ SetTemperature)
-  
-  cat("\n── Kruskal-Wallis Results ──\n")
-  print(kw_results)
-  
-  # ── 9. Dunn post-hoc (3+ temperatures only) ───────────────────────────────── 
-  dunn_results <- NULL
-  if (n_temps >= 3) {
-    dunn_results <- dat |>
-      group_by(growth_medium) |>
-      dunn_test(.parameter ~ SetTemperature, p.adjust.method = p_adjust_method)
+  # ── 2. Grubbs outlier detection and removal ──────────────────────────────────
+  if (removeOutliers) {
+    if (verbose) cat("\n── Grubbs Outlier Check ──\n\n")
     
-    cat("\n── Dunn Post-Hoc Results ──\n")
-    print(dunn_results)
-  } else {
-    cat("\n── Dunn post-hoc skipped: fewer than 3 temperatures ──\n")
+    outlier_log <- tibble()   # track what gets removed
+    
+    df <- df %>%
+      group_by(.strain, .medium, .temp) %>%
+      group_modify(~ {
+        vals <- .x$.param
+        
+        # Need at least 3 values for Grubbs test to work
+        if (length(vals) < 3) {
+          if (verbose)
+            cat(sprintf("   SKIP  %s × %s × %s°C — only %d replicates (need ≥ 3)\n",
+                        .y$.strain, .y$.medium, .y$.temp, length(vals)))
+          return(.x)
+        }
+        
+        # Run Grubbs test
+        g <- grubbs.test(vals)
+        
+        if (g$p.value < grubbsAlpha) {
+          # Identify which value is the outlier (furthest from mean)
+          outlier_val <- vals[which.max(abs(vals - mean(vals)))]
+          
+          if (verbose)
+            cat(sprintf(
+              "   OUTLIER REMOVED: %s × %s × %s°C — value %.4f (Grubbs p = %.4f)\n",
+              .y$.strain, .y$.medium, .y$.temp, outlier_val, g$p.value
+            ))
+          
+          # Remove the outlier row
+          .x <- .x %>% filter(.param != outlier_val)
+        } else {
+          if (verbose)
+            cat(sprintf(
+              "   OK    %s × %s × %s°C — no outlier (Grubbs p = %.4f)\n",
+              .y$.strain, .y$.medium, .y$.temp, g$p.value
+            ))
+        }
+        return(.x)
+      }) %>%
+      ungroup()
+    
+    if (verbose) cat("\n")
   }
   
-  # ── 10. Effect size ───────────────────────────────────────────────────────────
-  effect_size <- dat |>
-    group_by(growth_medium) |>
-    kruskal_effsize(.parameter ~ SetTemperature)
+  # ── 3. All pairwise combinations ─────────────────────────────────────────────
+  strain_pairs <- combn(as.character(available_strains), 2, simplify = FALSE)
   
-  cat("\n── Effect Size (epsilon-squared) ──\n")
-  print(effect_size)
+  if (verbose) {
+    cat(sprintf("── Comparing %d strains: %d pairwise combinations ──\n\n",
+                length(available_strains), length(strain_pairs)))
+    cat(sprintf("   Strains : %s\n", paste(available_strains, collapse = ", ")))
+    cat(sprintf("   Media   : %s\n", paste(media, collapse = ", ")))
+    cat(sprintf("   Temps   : %s\n",
+                if (is.null(temperatures)) "all" else paste(temperatures, collapse = ", ")))
+    cat(sprintf("   Param   : %s\n\n", param))
+  }
   
-  # ── 11. Per-mutant Kruskal-Wallis ─────────────────────────────────────────────
-  kw_per_mutant <- dat |>
-    group_by(mutant_ID, growth_medium) |>
-    dplyr::filter(n_distinct(SetTemperature) == n_temps) |>
-    kruskal_test(.parameter ~ SetTemperature) |>
-    adjust_pvalue(method = fdr_method) |>
-    add_significance()
+  # ── 4. Run pairwise t-tests ──────────────────────────────────────────────────
+  results <- map_dfr(strain_pairs, function(pair) {
+    s1 <- pair[1]
+    s2 <- pair[2]
+    
+    df %>%
+      group_by(.medium, .temp) %>%
+      group_modify(~ {
+        vals1 <- .x %>% filter(.strain == s1) %>% pull(.param)
+        vals2 <- .x %>% filter(.strain == s2) %>% pull(.param)
+        
+        if (length(vals1) < 2 | length(vals2) < 2) {
+          return(tibble(
+            strain1     = s1,
+            strain2     = s2,
+            n1          = length(vals1),
+            n2          = length(vals2),
+            mean1       = mean(vals1, na.rm = TRUE),
+            mean2       = mean(vals2, na.rm = TRUE),
+            fold_change = mean1 / mean2,
+            statistic   = NA_real_,
+            p.value     = NA_real_
+          ))
+        }
+        
+        test <- t.test(vals1, vals2)
+        tibble(
+          strain1     = s1,
+          strain2     = s2,
+          n1          = length(vals1),
+          n2          = length(vals2),
+          mean1       = mean(vals1, na.rm = TRUE),
+          mean2       = mean(vals2, na.rm = TRUE),
+          fold_change = mean1 / mean2,
+          statistic   = test$statistic,
+          p.value     = test$p.value
+        )
+      }) %>%
+      ungroup()
+  })
   
-  sig_mutants <- kw_per_mutant |>
-    dplyr::filter(p.adj < fdr_threshold) |>
-    select(mutant_ID, growth_medium, statistic, p, p.adj, p.adj.signif)
+  # ── 5. Adjust p-values ───────────────────────────────────────────────────────
+  results <- results %>%
+    rename(growth_medium = .medium, temperature = .temp) %>%
+    group_by(growth_medium, temperature) %>%
+    mutate(
+      p.adj       = p.adjust(p.value, method = pAdjMethod),
+      significant = p.adj < alpha,
+      sig_label   = case_when(
+        p.adj < 0.001 ~ "***",
+        p.adj < 0.01  ~ "**",
+        p.adj < 0.05  ~ "*",
+        p.adj < 0.1   ~ ".",
+        TRUE           ~ "ns"
+      ),
+      comparison  = paste(strain1, "vs", strain2),
+      param       = param
+    ) %>%
+    ungroup() %>%
+    select(
+      comparison, strain1, strain2, growth_medium, temperature, param,
+      n1, n2, mean1, mean2, fold_change,
+      statistic, p.value, p.adj, sig_label, significant
+    ) %>%
+    arrange(growth_medium, temperature, p.adj)
   
-  cat(paste0("\n── Mutants significantly affected by temperature (FDR < ",
-             fdr_threshold, ") ──\n"))
-  print(sig_mutants)
+  # ── 6. Print summary ─────────────────────────────────────────────────────────
+  if (verbose) {
+    cat("── Significant pairwise differences ──\n\n")
+    sig <- results %>%
+      filter(significant) %>%
+      select(comparison, growth_medium, temperature, mean1, mean2, fold_change, p.adj, sig_label)
+    
+    if (nrow(sig) == 0) {
+      cat("No significant differences found.\n")
+    } else {
+      print(sig, n = Inf)
+    }
+    
+    cat(sprintf("\n%d of %d comparisons significant (p.adj < %.2f)\n",
+                sum(results$significant, na.rm = TRUE),
+                nrow(results),
+                alpha))
+  }
   
-  # ── 12. Return all results ────────────────────────────────────────────────────
-  invisible(list(
-    data            = dat,
-    kw_results      = kw_results,
-    dunn_results    = dunn_results,
-    effect_size     = effect_size,
-    kw_per_mutant   = kw_per_mutant,
-    sig_mutants     = sig_mutants,
-    plates_detected = plates_to_include,
-    temps_detected  = temp_levels,
-    parameter       = parameter
-  ))
+  invisible(results)
 }
 
+### t_test 
+compareGrowthGroups <- function(
+    growthData,
+    param              = "mumax",
+    strainCol          = "mutant_ID",
+    mediumCol          = "growth_medium",
+    tempCol            = "SetTemperature",
+    baselineStrain     = "WT",
+    baselineMedium     = "M9gluc",
+    baselineTemp       = 30,
+    testMedium         = "M9gluc",
+    testTemp           = 45,
+    testStrains        = NULL,
+    testType           = "auto",
+    pAdjMethod         = "BH",
+    alpha              = 0.05,
+    verbose            = TRUE
+) {
+  
+  # ── 1. Validate columns ──────────────────────────────────────────────────────
+  required_cols <- c(strainCol, mediumCol, tempCol, param)
+  missing_cols  <- setdiff(required_cols, names(growthData))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing columns in data:", paste(missing_cols, collapse = ", ")))
+  }
+  
+  df <- growthData %>%
+    rename(
+      .strain = all_of(strainCol),
+      .medium = all_of(mediumCol),
+      .temp   = all_of(tempCol),
+      .param  = all_of(param)
+    ) %>%
+    filter(!is.na(.param))
+  
+  # ── 2. Reference group (e.g. WT × M9gluc × 30°C) ───────────────────────────
+  ref_data <- df %>%
+    filter(
+      .strain == baselineStrain,
+      .medium == baselineMedium,
+      .temp   == baselineTemp
+    )
+  
+  if (nrow(ref_data) == 0) {
+    stop(sprintf(
+      "No data found for baseline: %s × %s × %s°C",
+      baselineStrain, baselineMedium, baselineTemp
+    ))
+  }
+  
+  # ── 3. Determine strains to test ─────────────────────────────────────────────
+  available_strains <- unique(df$.strain)
+  
+  if (is.null(testStrains)) {
+    testStrains <- available_strains
+  } else {
+    missing_strains <- setdiff(testStrains, available_strains)
+    if (length(missing_strains) > 0)
+      warning(paste("Strains not found:", paste(missing_strains, collapse = ", ")))
+    testStrains <- intersect(testStrains, available_strains)
+  }
+  
+  # ── 4. Test groups (all selected strains × testMedium × testTemp) ────────────
+  test_groups <- df %>%
+    filter(
+      .strain %in% testStrains,
+      .medium == testMedium,
+      .temp   == testTemp
+    )
+  
+  if (nrow(test_groups) == 0) {
+    stop(sprintf(
+      "No data found for: %s × %s°C in selected strains.",
+      testMedium, testTemp
+    ))
+  }
+  
+  # ── 5. Auto test selection via Shapiro-Wilk ──────────────────────────────────
+  if (testType == "auto") {
+    sw       <- shapiro.test(ref_data$.param)
+    testType <- if (sw$p.value > 0.05) "parametric" else "nonparametric"
+    if (verbose)
+      message(sprintf("[Auto] Shapiro-Wilk p = %.3f → using %s test",
+                      sw$p.value, testType))
+  }
+  
+  # ── 6. Pairwise tests vs reference ──────────────────────────────────────────
+  results <- test_groups %>%
+    group_by(.strain, .medium, .temp) %>%
+    group_modify(~ {
+      group_vals <- .x$.param
+      
+      if (length(group_vals) < 2) {
+        return(tibble(
+          n_test    = length(group_vals),
+          n_ref     = nrow(ref_data),
+          mean_test = mean(group_vals, na.rm = TRUE),
+          mean_ref  = mean(ref_data$.param, na.rm = TRUE),
+          statistic = NA_real_,
+          p.value   = NA_real_,
+          method    = "insufficient replicates"
+        ))
+      }
+      
+      if (testType == "parametric") {
+        res    <- t.test(group_vals, ref_data$.param)
+        method <- "Welch t-test"
+      } else {
+        res    <- wilcox.test(group_vals, ref_data$.param, exact = FALSE)
+        method <- "Wilcoxon rank-sum"
+      }
+      
+      tibble(
+        n_test    = length(group_vals),
+        n_ref     = nrow(ref_data),
+        mean_test = mean(group_vals, na.rm = TRUE),
+        mean_ref  = mean(ref_data$.param, na.rm = TRUE),
+        statistic = res$statistic,
+        p.value   = res$p.value,
+        method    = method
+      )
+    }) %>%
+    ungroup()
+  
+  # ── 7. Adjust p-values and label significance ────────────────────────────────
+  results <- results %>%
+    mutate(
+      p.adj       = p.adjust(p.value, method = pAdjMethod),
+      significant = p.adj < alpha,
+      sig_label   = case_when(
+        p.adj < 0.001 ~ "***",
+        p.adj < 0.01  ~ "**",
+        p.adj < 0.05  ~ "*",
+        p.adj < 0.1   ~ ".",
+        TRUE           ~ "ns"
+      ),
+      reference   = sprintf("%s × %s × %s°C", baselineStrain, baselineMedium, baselineTemp),
+      comparison  = sprintf("%s × %s × %s°C", .strain, .medium, .temp),
+      param       = param,
+      fold_change = mean_test / mean_ref
+    ) %>%
+    select(
+      comparison, reference, param,
+      n_test, n_ref,
+      mean_test, mean_ref, fold_change,
+      statistic, p.value, p.adj,
+      sig_label, significant, method
+    ) %>%
+    arrange(p.adj)
+  
+  # ── 8. Console summary ───────────────────────────────────────────────────────
+  if (verbose) {
+    cat("\n══════════════════════════════════════════════════\n")
+    cat(sprintf(" Parameter  : %s\n", param))
+    cat(sprintf(" Reference  : %s × %s × %s°C  (n=%d)\n",
+                baselineStrain, baselineMedium, baselineTemp, nrow(ref_data)))
+    cat(sprintf(" Test group : %s × %s°C\n", testMedium, testTemp))
+    cat(sprintf(" Test       : %s | p-adj: %s | α = %.2f\n",
+                unique(results$method)[1], pAdjMethod, alpha))
+    cat("══════════════════════════════════════════════════\n\n")
+    print(results %>%
+            select(comparison, mean_test, mean_ref, fold_change, p.adj, sig_label))
+    cat("\n")
+  }
+  
+  invisible(results)
+}
+
+
+### autocorrelation 
+good_curves <- dat_facet |>
+  group_by(mutant_ID, Temperature, Replicate, growth_medium) |>
+  summarise(
+    lag1_acf = if (n() < 3) NA_real_ else acf(OD, lag.max = 1, plot = FALSE)$acf[2, 1, 1],
+    .groups = "drop"
+  ) |>
+  filter(!is.na(lag1_acf), lag1_acf >= 0.90)
+
+dat_facet <- dat_facet |>
+  semi_join(good_curves, by = c("mutant_ID", "Temperature", "Replicate", "growth_medium"))
