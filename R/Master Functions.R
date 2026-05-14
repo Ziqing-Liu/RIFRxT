@@ -2,6 +2,8 @@ library(tidyverse)
 library(grow96)
 library(rstatix)
 library(outliers)
+library(dunn.test)
+library(car)
 
 source("R/Code for Functions.R")
 
@@ -16,75 +18,90 @@ data <- blankODs(data, method = "fixed", value = 0.05)
 growthAnalysis <- analyseODData(data, h = 20)
 
 
-###Functions
+### Functions
 
-#maxOD and mumax heatmap 
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Heat map showing maxOD and mumax
+
 plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
 
 plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
 
-#Growth curve measured with OD for LB and M9
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Big facet plots showing the growth curve using OD for LB and M9 
+
 plot_OD_facet(data, "plots/LB_plot.pdf", growth_media = "LB")
 
 plot_OD_facet(data, "plots/M9_plot.pdf", growth_media = "M9gluc")
 
-#Facet wrap looking at the OD level of each mutant at each temperature 
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Facet wrap plots looking at the OD level of each mutant at each temperature 
 
 plot_facet_wrap(growthAnalysis, "plots/LB_OD_wrap.pdf", growth_media = "LB", label_map = my_labels)
 
 plot_facet_wrap(growthAnalysis, "plots/M9_OD_wrap.pdf", growth_media = "M9gluc", label_map = my_labels)
 
-#Facet wrap looking at the mumax of each mutant at each temperature 
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Facet wrap plots looking at the mumax of each mutant at each temperature 
+
 plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", growth_media = "LB", metric = "mumax", label_map = my_labels)
 
 plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", metric = "mumax", label_map = my_labels)
 
-#Sig test across multiple mutants at the same temperature  
-results <- compareMutants(
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Two-group comparison (key: M1, LB/M9gluc, 30/45)
+compareTwoGroups(
+  growthData = growthAnalysis$pars,
+  param      = "maxOD",
+  group1 = list(strain = "M7",  medium = "LB", temp = 45),
+  group2 = list(strain = "M24", medium = "M9gluc", temp = 30)
+)
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Multi_group comparison (key: M1, LB/M9gluc, 30/45)
+
+#Compare strains at a fixed temperature and medium
+compareMultipleGroups(
   growthData       = growthAnalysis$pars,
   param            = "maxOD",
-  strainsToCompare = c("M12","M1"),  
-  media            = c("LB"),
-  temperatures     = c(45),
-  removeOutliers   = 
+  strainsToCompare = c("WT", "M3", "M7", "M24"),
+  media            = "LB",
+  temperatures     = 30,
+  groupBy          = "strain"
 )
 
-# sig test for LB (change test strains to NULL to include all mutants)(change maxOD to mumax based on need)print(results_all_LB, n = Inf)
-results_all_LB <- compareGrowthGroups(
-  growthData        = growthAnalysis$pars,
-  param             = "maxOD",
-  baselineStrain    = "M1",
-  baselineMedium    = "LB",
-  baselineTemp      = 45,
-  testMedium        = "LB",
-  testTemp          = 45,
-  testStrains       = "M12",
-  testType          = "parametric",  
-  pAdjMethod        = "BH"
+# Compare one strain across temperatures in one medium
+compareMultipleGroups(
+  growthData       = growthAnalysis$pars,
+  param            = "maxOD",
+  strainsToCompare = "M3",
+  media            = "LB",
+  temperatures     = c(30, 32, 34),
+  groupBy          = "temperature"
 )
 
-# Sig test for M9_gluc (change test strains to NULL to include all mutants)(change maxOD to mumax based on need)
-results_all_M9_gluc <- compareGrowthGroups(
-  growthData        = growthAnalysis$pars,
-  param             = "maxOD",
-  baselineStrain    = "M12",
-  baselineMedium    = "LB",
-  baselineTemp      = 45,
-  testMedium        = "LB",
-  testTemp          = 45,
-  testStrains       = NULL,
-  testType          = "parametric",  
-  pAdjMethod        = "BH"
-)
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-grubbs.test(c(0.7001, 0.8187))
+# Custom group comparison (strain, media and temperature are all different)
+
+compareCustomGroups(
+  growthData = growthAnalysis$pars,
+  param      = "maxOD",
+  groups     = list(
+    list(strain = "WT", medium = "LB",     temp = 30),
+    list(strain = "M1", medium = "M9gluc", temp = 32),
+    list(strain = "M2", medium = "LB",     temp = 42)
+  )
+)
 
 
 ### view
-
-results_maxOD$sig_mutants
-results_maxOD$dunn_results
-results_maxOD$effect_size
 
 shinyPlate(data)
 
@@ -94,7 +111,7 @@ view(data)
 
 names(growthAnalysis$pars)
 
-filter <- dplyr::filter
+
 
 
 

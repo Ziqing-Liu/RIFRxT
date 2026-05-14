@@ -1,6 +1,8 @@
 # Various plotting functions
 
-# plotting maxOD or mumax as a heatmap:
+# ══════════════════════════════════════════════════════════════════════════════
+# Heat map 
+# ══════════════════════════════════════════════════════════════════════════════
 plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, metric = c("mumax", "max_od")) {
   metric <- match.arg(metric)
   if (metric == "mumax") {
@@ -47,7 +49,9 @@ plot_heatmap <- function(growthAnalysis, file_name, plates_to_include = NULL, me
   return(p)
 }
 
-#facet OD
+# ══════════════════════════════════════════════════════════════════════════════
+# Facet OD plots 
+# ══════════════════════════════════════════════════════════════════════════════
 
 plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_media = c("LB", "M9gluc")) {
   growth_media <- match.arg(growth_media, choices = c("LB", "M9gluc"))
@@ -91,7 +95,9 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_medi
 }
 
 
-#facet wrap plot 
+# ══════════════════════════════════════════════════════════════════════════════
+# Facet wrap plots 
+# ══════════════════════════════════════════════════════════════════════════════
 
 plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL, 
                             growth_media = c("LB", "M9gluc"),
@@ -163,232 +169,183 @@ labels_df <- read.csv("design/mutation_names.csv")
 my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 
 
-#auto correlation 
+#auto correlation makes vlaues at high temperature become weird 
 
 
-#Significance test between same mutant accross different temp 
-compareMutants <- function(
+# ══════════════════════════════════════════════════════════════════════════════
+# FUNCTION 1: Two-group comparison
+# ══════════════════════════════════════════════════════════════════════════════
+
+compareTwoGroups <- function(
+    growthData,
+    param       = "maxOD",
+    strainCol   = "mutant_ID",
+    mediumCol   = "growth_medium",
+    tempCol     = "SetTemperature",
+    group1      = list(strain = "WT",  medium = "LB", temp = 30),
+    group2      = list(strain = "M1",  medium = "LB", temp = 30),
+    paired      = NULL,   # NULL = auto-detect, TRUE/FALSE = force
+    alpha       = 0.05,
+    verbose     = TRUE
+) {
+  
+  library(car)  # for Levene's test
+  
+  # ── 1. Extract the two groups ─────────────────────────────────────────────
+  get_vals <- function(g) {
+    growthData %>%
+      rename(.strain = all_of(strainCol),
+             .medium = all_of(mediumCol),
+             .temp   = all_of(tempCol),
+             .param  = all_of(param)) %>%
+      filter(.strain == g$strain,
+             .medium == g$medium,
+             .temp   == g$temp,
+             !is.na(.param)) %>%
+      pull(.param)
+  }
+  
+  vals1 <- get_vals(group1)
+  vals2 <- get_vals(group2)
+  
+  if (length(vals1) < 2 | length(vals2) < 2)
+    stop("Need at least 2 values in each group.")
+  
+  if (is.null(paired)) {
+    paired <- group1$strain == group2$strain
+    if (verbose)
+      message(sprintf("[Auto] %s: paired = %s",
+                      if (paired) "Same strain detected" else "Different strains detected",
+                      paired))
+  }
+  
+  if (paired && length(vals1) != length(vals2))
+    stop("Paired test requires equal group sizes.")
+  
+  # ── 3. Assess parametric assumptions ─────────────────────────────────────
+  if (verbose) cat("\n── Parametric Assumption Checks ──\n\n")
+  
+  # Normality: Shapiro-Wilk on each group
+  sw1 <- if (length(vals1) >= 3) shapiro.test(vals1) else NULL
+  sw2 <- if (length(vals2) >= 3) shapiro.test(vals2) else NULL
+  
+  normal1 <- if (is.null(sw1)) TRUE else sw1$p.value > alpha
+  normal2 <- if (is.null(sw2)) TRUE else sw2$p.value > alpha
+  
+  if (verbose) {
+    cat(sprintf("   Normality (Shapiro-Wilk):\n"))
+    cat(sprintf("     Group 1 (%s × %s × %s°C): W = %.4f, p = %.4f  %s\n",
+                group1$strain, group1$medium, group1$temp,
+                if (!is.null(sw1)) sw1$statistic else NA,
+                if (!is.null(sw1)) sw1$p.value else NA,
+                if (normal1) "✓ normal" else "✗ non-normal"))
+    cat(sprintf("     Group 2 (%s × %s × %s°C): W = %.4f, p = %.4f  %s\n\n",
+                group2$strain, group2$medium, group2$temp,
+                if (!is.null(sw2)) sw2$statistic else NA,
+                if (!is.null(sw2)) sw2$p.value else NA,
+                if (normal2) "✓ normal" else "✗ non-normal"))
+  }
+  
+  # Equal variance: Levene's test (only relevant for unpaired)
+  if (!paired) {
+    all_vals  <- c(vals1, vals2)
+    group_fac <- factor(c(rep("g1", length(vals1)), rep("g2", length(vals2))))
+    lev       <- leveneTest(all_vals ~ group_fac)
+    equal_var <- lev$`Pr(>F)`[1] > alpha
+    
+    if (verbose) {
+      cat(sprintf("   Equal Variance (Levene's test): F = %.4f, p = %.4f  %s\n\n",
+                  lev$`F value`[1],
+                  lev$`Pr(>F)`[1],
+                  if (equal_var) "✓ equal variances" else "✗ unequal variances"))
+    }
+  } else {
+    equal_var <- TRUE  # not needed for paired
+  }
+  
+  # ── 4. Choose and run test ────────────────────────────────────────────────
+  assumptions_met <- normal1 & normal2
+  
+  if (assumptions_met) {
+    if (paired) {
+      test        <- t.test(vals1, vals2, paired = TRUE)
+      method_used <- "Paired t-test"
+    } else {
+      # Student's if equal variance, Welch's if not
+      test        <- t.test(vals1, vals2, paired = FALSE, var.equal = equal_var)
+      method_used <- if (equal_var) "Student's unpaired t-test" else "Welch's unpaired t-test"
+    }
+  } else {
+    test        <- wilcox.test(vals1, vals2, paired = paired, exact = FALSE)
+    method_used <- if (paired) "Wilcoxon signed-rank test" else "Mann-Whitney U test"
+  }
+  
+  # ── 5. Results ────────────────────────────────────────────────────────────
+  sig_label <- case_when(
+    test$p.value < 0.001 ~ "***",
+    test$p.value < 0.01  ~ "**",
+    test$p.value < 0.05  ~ "*",
+    test$p.value < 0.1   ~ ".",
+    TRUE                 ~ "ns"
+  )
+  
+  if (verbose) {
+    cat(sprintf("── Test: %s ──\n\n", method_used))
+    cat(sprintf("   Group 1 : %s × %s × %s°C  (n=%d, mean=%.4f)\n",
+                group1$strain, group1$medium, group1$temp, length(vals1), mean(vals1)))
+    cat(sprintf("   Group 2 : %s × %s × %s°C  (n=%d, mean=%.4f)\n",
+                group2$strain, group2$medium, group2$temp, length(vals2), mean(vals2)))
+    cat(sprintf("   Fold change : %.4f\n", mean(vals1) / mean(vals2)))
+    cat(sprintf("   Statistic   : %.4f\n", test$statistic))
+    cat(sprintf("   p-value     : %.4f  %s\n\n", test$p.value, sig_label))
+  }
+  
+  invisible(list(
+    method      = method_used,
+    statistic   = test$statistic,
+    p.value     = test$p.value,
+    sig_label   = sig_label,
+    significant = test$p.value < alpha,
+    mean1       = mean(vals1),
+    mean2       = mean(vals2),
+    fold_change = mean(vals1) / mean(vals2),
+    paired      = paired,
+    assumptions = list(normal1 = normal1, normal2 = normal2, equal_var = equal_var)
+  ))
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FUNCTION 2: Multi-group comparison
+# ══════════════════════════════════════════════════════════════════════════════
+
+compareMultipleGroups <- function(
     growthData,
     param            = "maxOD",
     strainCol        = "mutant_ID",
     mediumCol        = "growth_medium",
     tempCol          = "SetTemperature",
     strainsToCompare = NULL,
-    media            = c("LB", "M9gluc"),
+    media            = NULL,
     temperatures     = NULL,
-    pAdjMethod       = "BH",
+    groupBy          = c("strain", "temperature", "medium"),
     alpha            = 0.05,
-    removeOutliers   = TRUE,   # TRUE = auto-remove Grubbs outliers
-    grubbsAlpha      = 0.05,   # significance threshold for Grubbs test
     verbose          = TRUE
 ) {
   
-  library(outliers)
+  library(car)
+  library(dunn.test)
+  library(tibble)
+  library(dplyr)
+  library(purrr)
   
-  # ── 1. Validate ──────────────────────────────────────────────────────────────
-  required_cols <- c(strainCol, mediumCol, tempCol, param)
-  missing_cols  <- setdiff(required_cols, names(growthData))
-  if (length(missing_cols) > 0)
-    stop(paste("Missing columns:", paste(missing_cols, collapse = ", ")))
+  # safe formatter — returns "NA" string instead of crashing
+  fmt <- function(x) if (is.na(x)) "NA" else sprintf("%.4f", x)
   
-  df <- growthData %>%
-    rename(
-      .strain = all_of(strainCol),
-      .medium = all_of(mediumCol),
-      .temp   = all_of(tempCol),
-      .param  = all_of(param)
-    ) %>%
-    filter(!is.na(.param), .medium %in% media)
+  # ── 1. Validate groupBy ───────────────────────────────────────────────────
+  groupBy <- match.arg(groupBy, several.ok = FALSE)
   
-  if (!is.null(temperatures))
-    df <- df %>% filter(.temp %in% temperatures)
-  
-  if (!is.null(strainsToCompare)) {
-    missing_strains <- setdiff(strainsToCompare, unique(df$.strain))
-    if (length(missing_strains) > 0)
-      warning(paste("Strains not found:", paste(missing_strains, collapse = ", ")))
-    df <- df %>% filter(.strain %in% strainsToCompare)
-  }
-  
-  available_strains <- unique(df$.strain)
-  if (length(available_strains) < 2)
-    stop("Need at least 2 strains to compare.")
-  
-  # ── 2. Grubbs outlier detection and removal ──────────────────────────────────
-  if (removeOutliers) {
-    if (verbose) cat("\n── Grubbs Outlier Check ──\n\n")
-    
-    outlier_log <- tibble()   # track what gets removed
-    
-    df <- df %>%
-      group_by(.strain, .medium, .temp) %>%
-      group_modify(~ {
-        vals <- .x$.param
-        
-        # Need at least 3 values for Grubbs test to work
-        if (length(vals) < 3) {
-          if (verbose)
-            cat(sprintf("   SKIP  %s × %s × %s°C — only %d replicates (need ≥ 3)\n",
-                        .y$.strain, .y$.medium, .y$.temp, length(vals)))
-          return(.x)
-        }
-        
-        # Run Grubbs test
-        g <- grubbs.test(vals)
-        
-        if (g$p.value < grubbsAlpha) {
-          # Identify which value is the outlier (furthest from mean)
-          outlier_val <- vals[which.max(abs(vals - mean(vals)))]
-          
-          if (verbose)
-            cat(sprintf(
-              "   OUTLIER REMOVED: %s × %s × %s°C — value %.4f (Grubbs p = %.4f)\n",
-              .y$.strain, .y$.medium, .y$.temp, outlier_val, g$p.value
-            ))
-          
-          # Remove the outlier row
-          .x <- .x %>% filter(.param != outlier_val)
-        } else {
-          if (verbose)
-            cat(sprintf(
-              "   OK    %s × %s × %s°C — no outlier (Grubbs p = %.4f)\n",
-              .y$.strain, .y$.medium, .y$.temp, g$p.value
-            ))
-        }
-        return(.x)
-      }) %>%
-      ungroup()
-    
-    if (verbose) cat("\n")
-  }
-  
-  # ── 3. All pairwise combinations ─────────────────────────────────────────────
-  strain_pairs <- combn(as.character(available_strains), 2, simplify = FALSE)
-  
-  if (verbose) {
-    cat(sprintf("── Comparing %d strains: %d pairwise combinations ──\n\n",
-                length(available_strains), length(strain_pairs)))
-    cat(sprintf("   Strains : %s\n", paste(available_strains, collapse = ", ")))
-    cat(sprintf("   Media   : %s\n", paste(media, collapse = ", ")))
-    cat(sprintf("   Temps   : %s\n",
-                if (is.null(temperatures)) "all" else paste(temperatures, collapse = ", ")))
-    cat(sprintf("   Param   : %s\n\n", param))
-  }
-  
-  # ── 4. Run pairwise t-tests ──────────────────────────────────────────────────
-  results <- map_dfr(strain_pairs, function(pair) {
-    s1 <- pair[1]
-    s2 <- pair[2]
-    
-    df %>%
-      group_by(.medium, .temp) %>%
-      group_modify(~ {
-        vals1 <- .x %>% filter(.strain == s1) %>% pull(.param)
-        vals2 <- .x %>% filter(.strain == s2) %>% pull(.param)
-        
-        if (length(vals1) < 2 | length(vals2) < 2) {
-          return(tibble(
-            strain1     = s1,
-            strain2     = s2,
-            n1          = length(vals1),
-            n2          = length(vals2),
-            mean1       = mean(vals1, na.rm = TRUE),
-            mean2       = mean(vals2, na.rm = TRUE),
-            fold_change = mean1 / mean2,
-            statistic   = NA_real_,
-            p.value     = NA_real_
-          ))
-        }
-        
-        test <- t.test(vals1, vals2)
-        tibble(
-          strain1     = s1,
-          strain2     = s2,
-          n1          = length(vals1),
-          n2          = length(vals2),
-          mean1       = mean(vals1, na.rm = TRUE),
-          mean2       = mean(vals2, na.rm = TRUE),
-          fold_change = mean1 / mean2,
-          statistic   = test$statistic,
-          p.value     = test$p.value
-        )
-      }) %>%
-      ungroup()
-  })
-  
-  # ── 5. Adjust p-values ───────────────────────────────────────────────────────
-  results <- results %>%
-    rename(growth_medium = .medium, temperature = .temp) %>%
-    group_by(growth_medium, temperature) %>%
-    mutate(
-      p.adj       = p.adjust(p.value, method = pAdjMethod),
-      significant = p.adj < alpha,
-      sig_label   = case_when(
-        p.adj < 0.001 ~ "***",
-        p.adj < 0.01  ~ "**",
-        p.adj < 0.05  ~ "*",
-        p.adj < 0.1   ~ ".",
-        TRUE           ~ "ns"
-      ),
-      comparison  = paste(strain1, "vs", strain2),
-      param       = param
-    ) %>%
-    ungroup() %>%
-    select(
-      comparison, strain1, strain2, growth_medium, temperature, param,
-      n1, n2, mean1, mean2, fold_change,
-      statistic, p.value, p.adj, sig_label, significant
-    ) %>%
-    arrange(growth_medium, temperature, p.adj)
-  
-  # ── 6. Print summary ─────────────────────────────────────────────────────────
-  if (verbose) {
-    cat("── Significant pairwise differences ──\n\n")
-    sig <- results %>%
-      filter(significant) %>%
-      select(comparison, growth_medium, temperature, mean1, mean2, fold_change, p.adj, sig_label)
-    
-    if (nrow(sig) == 0) {
-      cat("No significant differences found.\n")
-    } else {
-      print(sig, n = Inf)
-    }
-    
-    cat(sprintf("\n%d of %d comparisons significant (p.adj < %.2f)\n",
-                sum(results$significant, na.rm = TRUE),
-                nrow(results),
-                alpha))
-  }
-  
-  invisible(results)
-}
-
-### t_test 
-compareGrowthGroups <- function(
-    growthData,
-    param              = "mumax",
-    strainCol          = "mutant_ID",
-    mediumCol          = "growth_medium",
-    tempCol            = "SetTemperature",
-    baselineStrain     = "WT",
-    baselineMedium     = "M9gluc",
-    baselineTemp       = 30,
-    testMedium         = "M9gluc",
-    testTemp           = 45,
-    testStrains        = NULL,
-    testType           = "auto",
-    pAdjMethod         = "BH",
-    alpha              = 0.05,
-    verbose            = TRUE
-) {
-  
-  # ── 1. Validate columns ──────────────────────────────────────────────────────
-  required_cols <- c(strainCol, mediumCol, tempCol, param)
-  missing_cols  <- setdiff(required_cols, names(growthData))
-  if (length(missing_cols) > 0) {
-    stop(paste("Missing columns in data:", paste(missing_cols, collapse = ", ")))
-  }
-  
+  # ── 2. Filter data ────────────────────────────────────────────────────────
   df <- growthData %>%
     rename(
       .strain = all_of(strainCol),
@@ -398,148 +355,437 @@ compareGrowthGroups <- function(
     ) %>%
     filter(!is.na(.param))
   
-  # ── 2. Reference group (e.g. WT × M9gluc × 30°C) ───────────────────────────
-  ref_data <- df %>%
-    filter(
-      .strain == baselineStrain,
-      .medium == baselineMedium,
-      .temp   == baselineTemp
-    )
+  if (!is.null(strainsToCompare))
+    df <- df %>% filter(.strain %in% strainsToCompare)
   
-  if (nrow(ref_data) == 0) {
-    stop(sprintf(
-      "No data found for baseline: %s × %s × %s°C",
-      baselineStrain, baselineMedium, baselineTemp
-    ))
-  }
+  if (!is.null(media))
+    df <- df %>% filter(.medium %in% media)
   
-  # ── 3. Determine strains to test ─────────────────────────────────────────────
-  available_strains <- unique(df$.strain)
+  if (!is.null(temperatures))
+    df <- df %>% filter(.temp %in% temperatures)
   
-  if (is.null(testStrains)) {
-    testStrains <- available_strains
+  # ── 3. Define grouping variable and fixed variables ───────────────────────
+  if (groupBy == "strain") {
+    df         <- df %>% mutate(.group = factor(.strain))
+    group_lab  <- "strain"
+    split_vars <- c(".medium", ".temp")
+  } else if (groupBy == "temperature") {
+    df         <- df %>% mutate(.group = factor(.temp))
+    group_lab  <- "temperature"
+    split_vars <- c(".strain", ".medium")
   } else {
-    missing_strains <- setdiff(testStrains, available_strains)
-    if (length(missing_strains) > 0)
-      warning(paste("Strains not found:", paste(missing_strains, collapse = ", ")))
-    testStrains <- intersect(testStrains, available_strains)
+    df         <- df %>% mutate(.group = factor(.medium))
+    group_lab  <- "medium"
+    split_vars <- c(".strain", ".temp")
   }
   
-  # ── 4. Test groups (all selected strains × testMedium × testTemp) ────────────
-  test_groups <- df %>%
-    filter(
-      .strain %in% testStrains,
-      .medium == testMedium,
-      .temp   == testTemp
-    )
-  
-  if (nrow(test_groups) == 0) {
+  if (length(unique(df$.group)) < 3)
     stop(sprintf(
-      "No data found for: %s × %s°C in selected strains.",
-      testMedium, testTemp
+      "Need at least 3 levels of '%s' to compare. Found: %s",
+      group_lab,
+      paste(unique(df$.group), collapse = ", ")
     ))
-  }
   
-  # ── 5. Auto test selection via Shapiro-Wilk ──────────────────────────────────
-  if (testType == "auto") {
-    sw       <- shapiro.test(ref_data$.param)
-    testType <- if (sw$p.value > 0.05) "parametric" else "nonparametric"
+  # ── 4. Split into sub-analyses and run each ───────────────────────────────
+  splits <- df %>%
+    group_by(across(all_of(split_vars))) %>%
+    group_split()
+  
+  split_keys <- df %>%
+    group_by(across(all_of(split_vars))) %>%
+    group_keys()
+  
+  all_results <- map2(splits, seq_len(nrow(split_keys)), function(subdf, i) {
+    
+    key <- split_keys[i, ]
+    
+    context_label <- paste(
+      names(key),
+      unlist(key),
+      sep = " = ",
+      collapse = " | "
+    )
+    
     if (verbose)
-      message(sprintf("[Auto] Shapiro-Wilk p = %.3f → using %s test",
-                      sw$p.value, testType))
+      cat(sprintf(
+        "\n══════════════════════════════════════════════════\n Comparing by %s  [%s]\n══════════════════════════════════════════════════\n",
+        group_lab, context_label
+      ))
+    
+    if (length(unique(subdf$.group)) < 3) {
+      if (verbose)
+        cat(sprintf("   SKIP — fewer than 3 levels of %s found here\n", group_lab))
+      return(NULL)
+    }
+    
+    # ── Parametric assumption checks ─────────────────────────────────────────
+    if (verbose) cat("\n── Parametric Assumption Checks ──\n\n")
+    
+    normality <- subdf %>%
+      group_by(.group) %>%
+      summarise(
+        n       = n(),
+        sw_stat = if (n() >= 3) shapiro.test(.param)$statistic else NA_real_,
+        sw_p    = if (n() >= 3) shapiro.test(.param)$p.value   else NA_real_,
+        normal  = if (n() >= 3) shapiro.test(.param)$p.value > alpha else TRUE,
+        .groups = "drop"
+      )
+    
+    all_normal <- all(normality$normal, na.rm = TRUE)
+    
+    if (verbose) {
+      cat("   Normality (Shapiro-Wilk per group):\n")
+      for (r in seq_len(nrow(normality))) {
+        if (is.na(normality$sw_stat[r])) {
+          cat(sprintf("     %s: insufficient replicates (n=%d, need ≥ 3)\n",
+                      as.character(normality$.group[r]),
+                      normality$n[r]))
+        } else {
+          cat(sprintf("     %s: W = %s, p = %s  %s\n",
+                      as.character(normality$.group[r]),
+                      fmt(normality$sw_stat[r]),
+                      fmt(normality$sw_p[r]),
+                      if (isTRUE(normality$normal[r])) "✓ normal" else "✗ non-normal"))
+        }
+      }
+      cat("\n")
+    }
+    
+    lev       <- leveneTest(.param ~ .group, data = subdf)
+    equal_var <- lev$`Pr(>F)`[1] > alpha
+    
+    if (verbose)
+      cat(sprintf("   Equal Variance (Levene's test): F = %s, p = %s  %s\n\n",
+                  fmt(lev$`F value`[1]),
+                  fmt(lev$`Pr(>F)`[1]),
+                  if (equal_var) "✓ equal variances" else "✗ unequal variances"))
+    
+    assumptions_met <- all_normal & equal_var
+    
+    # ── Omnibus test ──────────────────────────────────────────────────────────
+    if (assumptions_met) {
+      
+      aov_fit   <- aov(.param ~ .group, data = subdf)
+      aov_sum   <- summary(aov_fit)
+      omni_p    <- aov_sum[[1]]$`Pr(>F)`[1]
+      omni_stat <- aov_sum[[1]]$`F value`[1]
+      omni_name <- "One-way ANOVA"
+      
+      if (verbose)
+        cat(sprintf("── %s: F = %s, p = %s  %s\n\n",
+                    omni_name,
+                    fmt(omni_stat),
+                    fmt(omni_p),
+                    if (omni_p < alpha) "→ significant, running Tukey HSD" else "→ not significant"))
+      
+      if (omni_p < alpha) {
+        posthoc_raw <- TukeyHSD(aov_fit)
+        posthoc_df  <- as.data.frame(posthoc_raw$.group) %>%
+          rownames_to_column("comparison") %>%
+          rename(mean_diff = diff, lower = lwr, upper = upr, p.value = `p adj`) %>%
+          mutate(
+            sig_label   = case_when(
+              p.value < 0.001 ~ "***",
+              p.value < 0.01  ~ "**",
+              p.value < 0.05  ~ "*",
+              p.value < 0.1   ~ ".",
+              TRUE            ~ "ns"
+            ),
+            significant = p.value < alpha,
+            posthoc     = "Tukey HSD"
+          )
+        
+        if (verbose) {
+          cat("── Post-hoc: Tukey HSD ──\n\n")
+          print(as.data.frame(posthoc_df %>%        # ← fixed
+                                select(comparison, mean_diff, p.value, sig_label, significant)))
+          cat("\n")
+        }
+      } else {
+        posthoc_df <- NULL
+      }
+      
+    } else {
+      
+      kw        <- kruskal.test(.param ~ .group, data = subdf)
+      omni_p    <- kw$p.value
+      omni_stat <- kw$statistic
+      omni_name <- "Kruskal-Wallis test"
+      
+      if (verbose)
+        cat(sprintf("── %s: H = %s, p = %s  %s\n\n",
+                    omni_name,
+                    fmt(omni_stat),
+                    fmt(omni_p),
+                    if (omni_p < alpha) "→ significant, running Dunn's test" else "→ not significant"))
+      
+      if (omni_p < alpha) {
+        dunn       <- dunn.test(subdf$.param, subdf$.group, method = "bh", altp = TRUE)
+        posthoc_df <- tibble(
+          comparison  = dunn$comparisons,
+          statistic   = dunn$Z,
+          p.value     = dunn$altP.adjusted
+        ) %>%
+          mutate(
+            sig_label   = case_when(
+              p.value < 0.001 ~ "***",
+              p.value < 0.01  ~ "**",
+              p.value < 0.05  ~ "*",
+              p.value < 0.1   ~ ".",
+              TRUE            ~ "ns"
+            ),
+            significant = p.value < alpha,
+            posthoc     = "Dunn's test (BH adjusted)"
+          )
+        
+        if (verbose) {
+          cat("── Post-hoc: Dunn's Test ──\n\n")
+          print(as.data.frame(posthoc_df %>%        # ← fixed
+                                select(comparison, statistic, p.value, sig_label, significant)))
+          cat("\n")
+        }
+      } else {
+        posthoc_df <- NULL
+      }
+    }
+    
+    list(
+      context         = as.list(key),
+      groupBy         = group_lab,
+      omnibus_test    = omni_name,
+      omnibus_stat    = omni_stat,
+      omnibus_p       = omni_p,
+      assumptions_met = assumptions_met,
+      normality       = normality,
+      equal_variance  = equal_var,
+      posthoc         = posthoc_df
+    )
+  })
+  
+  invisible(all_results)
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FUNCTION 3: Custom group comparison
+# ══════════════════════════════════════════════════════════════════════════════
+
+compareCustomGroups <- function(
+    growthData,
+    param     = "maxOD",
+    strainCol = "mutant_ID",
+    mediumCol = "growth_medium",
+    tempCol   = "SetTemperature",
+    groups,
+    alpha     = 0.05,
+    verbose   = TRUE
+) {
+  
+  library(car)
+  library(dunn.test)
+  library(tibble)
+  library(dplyr)
+  library(purrr)
+  
+  # safe formatter
+  fmt <- function(x) if (is.na(x)) "NA" else sprintf("%.4f", x)
+  
+  # ── 1. Validate groups ────────────────────────────────────────────────────
+  if (!is.list(groups) || length(groups) < 3)
+    stop("'groups' must be a list of at least 3 conditions.")
+  
+  required_fields <- c("strain", "medium", "temp")
+  for (i in seq_along(groups)) {
+    missing_fields <- setdiff(required_fields, names(groups[[i]]))
+    if (length(missing_fields) > 0)
+      stop(sprintf("Group %d is missing: %s", i, paste(missing_fields, collapse = ", ")))
   }
   
-  # ── 6. Pairwise tests vs reference ──────────────────────────────────────────
-  results <- test_groups %>%
-    group_by(.strain, .medium, .temp) %>%
-    group_modify(~ {
-      group_vals <- .x$.param
-      
-      if (length(group_vals) < 2) {
-        return(tibble(
-          n_test    = length(group_vals),
-          n_ref     = nrow(ref_data),
-          mean_test = mean(group_vals, na.rm = TRUE),
-          mean_ref  = mean(ref_data$.param, na.rm = TRUE),
-          statistic = NA_real_,
-          p.value   = NA_real_,
-          method    = "insufficient replicates"
-        ))
-      }
-      
-      if (testType == "parametric") {
-        res    <- t.test(group_vals, ref_data$.param)
-        method <- "Welch t-test"
-      } else {
-        res    <- wilcox.test(group_vals, ref_data$.param, exact = FALSE)
-        method <- "Wilcoxon rank-sum"
-      }
-      
-      tibble(
-        n_test    = length(group_vals),
-        n_ref     = nrow(ref_data),
-        mean_test = mean(group_vals, na.rm = TRUE),
-        mean_ref  = mean(ref_data$.param, na.rm = TRUE),
-        statistic = res$statistic,
-        p.value   = res$p.value,
-        method    = method
-      )
-    }) %>%
-    ungroup()
-  
-  # ── 7. Adjust p-values and label significance ────────────────────────────────
-  results <- results %>%
-    mutate(
-      p.adj       = p.adjust(p.value, method = pAdjMethod),
-      significant = p.adj < alpha,
-      sig_label   = case_when(
-        p.adj < 0.001 ~ "***",
-        p.adj < 0.01  ~ "**",
-        p.adj < 0.05  ~ "*",
-        p.adj < 0.1   ~ ".",
-        TRUE           ~ "ns"
-      ),
-      reference   = sprintf("%s × %s × %s°C", baselineStrain, baselineMedium, baselineTemp),
-      comparison  = sprintf("%s × %s × %s°C", .strain, .medium, .temp),
-      param       = param,
-      fold_change = mean_test / mean_ref
+  # ── 2. Extract data for each group ───────────────────────────────────────
+  df <- growthData %>%
+    rename(
+      .strain = all_of(strainCol),
+      .medium = all_of(mediumCol),
+      .temp   = all_of(tempCol),
+      .param  = all_of(param)
     ) %>%
-    select(
-      comparison, reference, param,
-      n_test, n_ref,
-      mean_test, mean_ref, fold_change,
-      statistic, p.value, p.adj,
-      sig_label, significant, method
-    ) %>%
-    arrange(p.adj)
+    filter(!is.na(.param))
   
-  # ── 8. Console summary ───────────────────────────────────────────────────────
+  # Build a flat data frame with one group label per row
+  group_data <- map_dfr(seq_along(groups), function(i) {
+    g         <- groups[[i]]
+    group_lab <- sprintf("%s × %s × %s°C", g$strain, g$medium, g$temp)
+    
+    vals <- df %>%
+      filter(
+        .strain == g$strain,
+        .medium == g$medium,
+        .temp   == g$temp
+      ) %>%
+      mutate(.group = factor(group_lab))
+    
+    if (nrow(vals) == 0)
+      warning(sprintf("No data found for group %d: %s", i, group_lab))
+    
+    vals
+  })
+  
+  if (length(unique(group_data$.group)) < 3)
+    stop("Need at least 3 groups with data to compare.")
+  
+  # ── 3. Print summary of groups ────────────────────────────────────────────
   if (verbose) {
     cat("\n══════════════════════════════════════════════════\n")
-    cat(sprintf(" Parameter  : %s\n", param))
-    cat(sprintf(" Reference  : %s × %s × %s°C  (n=%d)\n",
-                baselineStrain, baselineMedium, baselineTemp, nrow(ref_data)))
-    cat(sprintf(" Test group : %s × %s°C\n", testMedium, testTemp))
-    cat(sprintf(" Test       : %s | p-adj: %s | α = %.2f\n",
-                unique(results$method)[1], pAdjMethod, alpha))
+    cat(sprintf(" Custom group comparison  |  param: %s\n", param))
     cat("══════════════════════════════════════════════════\n\n")
-    print(results %>%
-            select(comparison, mean_test, mean_ref, fold_change, p.adj, sig_label))
+    cat("   Groups:\n")
+    for (g in groups) {
+      lab  <- sprintf("%s × %s × %s°C", g$strain, g$medium, g$temp)
+      n    <- nrow(filter(group_data, .group == lab))
+      mean <- mean(filter(group_data, .group == lab)$.param, na.rm = TRUE)
+      cat(sprintf("     %s  (n=%d, mean=%s)\n", lab, n, fmt(mean)))
+    }
     cat("\n")
   }
   
-  invisible(results)
+  # ── 4. Parametric assumption checks ──────────────────────────────────────
+  if (verbose) cat("── Parametric Assumption Checks ──\n\n")
+  
+  normality <- group_data %>%
+    group_by(.group) %>%
+    summarise(
+      n       = n(),
+      sw_stat = if (n() >= 3) shapiro.test(.param)$statistic else NA_real_,
+      sw_p    = if (n() >= 3) shapiro.test(.param)$p.value   else NA_real_,
+      normal  = if (n() >= 3) shapiro.test(.param)$p.value > alpha else TRUE,
+      .groups = "drop"
+    )
+  
+  all_normal <- all(normality$normal, na.rm = TRUE)
+  
+  if (verbose) {
+    cat("   Normality (Shapiro-Wilk per group):\n")
+    for (r in seq_len(nrow(normality))) {
+      if (is.na(normality$sw_stat[r])) {
+        cat(sprintf("     %s: insufficient replicates (n=%d, need ≥ 3)\n",
+                    as.character(normality$.group[r]),
+                    normality$n[r]))
+      } else {
+        cat(sprintf("     %s: W = %s, p = %s  %s\n",
+                    as.character(normality$.group[r]),
+                    fmt(normality$sw_stat[r]),
+                    fmt(normality$sw_p[r]),
+                    if (isTRUE(normality$normal[r])) "✓ normal" else "✗ non-normal"))
+      }
+    }
+    cat("\n")
+  }
+  
+  lev       <- leveneTest(.param ~ .group, data = group_data)
+  equal_var <- lev$`Pr(>F)`[1] > alpha
+  
+  if (verbose)
+    cat(sprintf("   Equal Variance (Levene's test): F = %s, p = %s  %s\n\n",
+                fmt(lev$`F value`[1]),
+                fmt(lev$`Pr(>F)`[1]),
+                if (equal_var) "✓ equal variances" else "✗ unequal variances"))
+  
+  assumptions_met <- all_normal & equal_var
+  
+  # ── 5. Omnibus test ───────────────────────────────────────────────────────
+  if (assumptions_met) {
+    
+    aov_fit   <- aov(.param ~ .group, data = group_data)
+    aov_sum   <- summary(aov_fit)
+    omni_p    <- aov_sum[[1]]$`Pr(>F)`[1]
+    omni_stat <- aov_sum[[1]]$`F value`[1]
+    omni_name <- "One-way ANOVA"
+    
+    if (verbose)
+      cat(sprintf("── %s: F = %s, p = %s  %s\n\n",
+                  omni_name,
+                  fmt(omni_stat),
+                  fmt(omni_p),
+                  if (omni_p < alpha) "→ significant, running Tukey HSD" else "→ not significant"))
+    
+    if (omni_p < alpha) {
+      posthoc_raw <- TukeyHSD(aov_fit)
+      posthoc_df  <- as.data.frame(posthoc_raw$.group) %>%
+        rownames_to_column("comparison") %>%
+        rename(mean_diff = diff, lower = lwr, upper = upr, p.value = `p adj`) %>%
+        mutate(
+          sig_label   = case_when(
+            p.value < 0.001 ~ "***",
+            p.value < 0.01  ~ "**",
+            p.value < 0.05  ~ "*",
+            p.value < 0.1   ~ ".",
+            TRUE            ~ "ns"
+          ),
+          significant = p.value < alpha,
+          posthoc     = "Tukey HSD"
+        )
+      
+      if (verbose) {
+        cat("── Post-hoc: Tukey HSD ──\n\n")
+        print(as.data.frame(posthoc_df %>%
+                              select(comparison, mean_diff, p.value, sig_label, significant)))
+        cat("\n")
+      }
+    } else {
+      posthoc_df <- NULL
+    }
+    
+  } else {
+    
+    kw        <- kruskal.test(.param ~ .group, data = group_data)
+    omni_p    <- kw$p.value
+    omni_stat <- kw$statistic
+    omni_name <- "Kruskal-Wallis test"
+    
+    if (verbose)
+      cat(sprintf("── %s: H = %s, p = %s  %s\n\n",
+                  omni_name,
+                  fmt(omni_stat),
+                  fmt(omni_p),
+                  if (omni_p < alpha) "→ significant, running Dunn's test" else "→ not significant"))
+    
+    if (omni_p < alpha) {
+      dunn       <- dunn.test(group_data$.param, group_data$.group, method = "bh", altp = TRUE)
+      posthoc_df <- tibble(
+        comparison = dunn$comparisons,
+        statistic  = dunn$Z,
+        p.value    = dunn$altP.adjusted
+      ) %>%
+        mutate(
+          sig_label   = case_when(
+            p.value < 0.001 ~ "***",
+            p.value < 0.01  ~ "**",
+            p.value < 0.05  ~ "*",
+            p.value < 0.1   ~ ".",
+            TRUE            ~ "ns"
+          ),
+          significant = p.value < alpha,
+          posthoc     = "Dunn's test (BH adjusted)"
+        )
+      
+      if (verbose) {
+        cat("── Post-hoc: Dunn's Test ──\n\n")
+        print(as.data.frame(posthoc_df %>%
+                              select(comparison, statistic, p.value, sig_label, significant)))
+        cat("\n")
+      }
+    } else {
+      posthoc_df <- NULL
+    }
+  }
+  
+  invisible(list(
+    omnibus_test    = omni_name,
+    omnibus_stat    = omni_stat,
+    omnibus_p       = omni_p,
+    assumptions_met = assumptions_met,
+    normality       = normality,
+    equal_variance  = equal_var,
+    posthoc         = posthoc_df
+  ))
 }
 
-
-### autocorrelation 
-good_curves <- dat_facet |>
-  group_by(mutant_ID, Temperature, Replicate, growth_medium) |>
-  summarise(
-    lag1_acf = if (n() < 3) NA_real_ else acf(OD, lag.max = 1, plot = FALSE)$acf[2, 1, 1],
-    .groups = "drop"
-  ) |>
-  filter(!is.na(lag1_acf), lag1_acf >= 0.90)
-
-dat_facet <- dat_facet |>
-  semi_join(good_curves, by = c("mutant_ID", "Temperature", "Replicate", "growth_medium"))
