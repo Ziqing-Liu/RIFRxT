@@ -30,6 +30,16 @@ plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
+# Individual heat map 
+
+# LB only
+plot_heatmap_individual(growthAnalysis, "plots/LB_plot.pdf", metric = "max_od", medium = "LB")
+
+# M9gluc only
+plot_heatmap_individual(growthAnalysis, "plots/M9_plot.pdf", metric = "max_od", medium = "M9gluc")
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
 # Big facet plots showing the growth curve using OD for LB and M9 
 
 plot_OD_facet(data, "plots/LB_plot.pdf", growth_media = "LB")
@@ -58,23 +68,37 @@ plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", 
 compareTwoGroups(
   growthData = growthAnalysis$pars,
   param      = "maxOD",
-  group1 = list(strain = "M7",  medium = "LB", temp = 45),
-  group2 = list(strain = "M24", medium = "M9gluc", temp = 30)
+  group1 = list(strain = "WT",  medium = "LB", temp = 45),
+  group2 = list(strain = "M12", medium = "LB", temp = 45)
 )
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-# Multi_group comparison (key: M1, LB/M9gluc, 30/45)
+# Multi_group comparison (all 406) (key: M1, LB/M9gluc, 30/45)
 
 #Compare strains at a fixed temperature and medium
 compareMultipleGroups(
   growthData       = growthAnalysis$pars,
   param            = "maxOD",
-  strainsToCompare = c("WT", "M3", "M7", "M24"),
+  strainsToCompare = c(NULL),
   media            = "LB",
-  temperatures     = 30,
+  temperatures     = 36,
   groupBy          = "strain"
 )
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# Comparing 1 mutant with the other 28 mutant (just 28)
+
+compare1with28(
+  growthAnalysis$pars,
+  groupBy          = "strain",
+  reference_strain = "WT",
+  media            = "LB",
+  temperatures     = 45
+)
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 # Compare one strain across temperatures in one medium
 compareMultipleGroups(
