@@ -68,8 +68,8 @@ plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", 
 compareTwoGroups(
   growthData = growthAnalysis$pars,
   param      = "maxOD",
-  group1 = list(strain = "WT",  medium = "LB", temp = 45),
-  group2 = list(strain = "M12", medium = "LB", temp = 45)
+  group1 = list(strain = "WT",  medium = "LB", temp = 46),
+  group2 = list(strain = "M6", medium = "LB", temp = 46)
 )
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
