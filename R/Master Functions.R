@@ -125,6 +125,12 @@ compareCustomGroups(
 )
 
 
+# Data wrangle Alicia's MIC 
+
+# In the facet plots with the red lines keep the red line but show the reps as dots 
+
+
+
 ### view
 
 shinyPlate(data)
