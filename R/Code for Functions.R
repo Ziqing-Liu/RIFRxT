@@ -189,6 +189,9 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     group_by(mutant_ID, SetTemperature) |>
     summarise(
       mean_metric = mean(.data[[metric]], na.rm = TRUE),
+      sd_metric   = sd(.data[[metric]], na.rm = TRUE),
+      n_metric    = sum(!is.na(.data[[metric]])),
+      se_metric   = sd_metric / sqrt(n_metric),
       .groups = "drop"
     )
   
@@ -203,7 +206,20 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     y     = .data[[metric]],
     group = interaction(Replicate, mutant_ID)
   )) +
-    geom_line(linewidth = 0.3, alpha = 0.5) +
+    geom_point(
+      colour  = "forestgreen",
+      size    = 1.6,
+      alpha   = 0.7,
+      position = position_jitter(width = 0.15, height = 0)
+    ) +
+    geom_errorbar(
+      data = dat_mean,
+      aes(x = SetTemperature, y = mean_metric,
+          ymin = mean_metric - se_metric, ymax = mean_metric + se_metric,
+          group = mutant_ID),
+      width = 0.6, colour = "black", linewidth = 0.4,
+      inherit.aes = FALSE
+    ) +
     geom_line(
       data = dat_mean,
       aes(x = SetTemperature, y = mean_metric, group = mutant_ID),
@@ -221,9 +237,6 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
   ggsave(file_name, r, height = 8, width = 16, create.dir = TRUE)
   return(r)
 }
-  
-labels_df <- read.csv("design/mutation_names.csv")
-my_labels <- setNames(labels_df$old_name, labels_df$new_name)
 
 
 #auto correlation makes vlaues at high temperature become weird 
