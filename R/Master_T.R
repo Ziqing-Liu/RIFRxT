@@ -1,3 +1,9 @@
+install.packages("installr")
+library(installr)
+updateR()
+
+###
+
 library(tidyverse)
 library(grow96)
 library(rstatix)
@@ -5,7 +11,8 @@ library(outliers)
 library(dunn.test)
 library(car)
 
-source("R/Code for Functions.R")
+
+source("R/Code_T.R")
 
 filter <- dplyr::filter
 
@@ -24,43 +31,45 @@ growthAnalysis <- analyseODData(data, h = 20)
 
 # Heat map showing maxOD and mumax
 
-plot_heatmap(growthAnalysis, "plots/max_od_plot.pdf", metric = "max_od")
+plot_heatmap(growthAnalysis, "plots/max_od_heatmap_LB_and_M9.pdf", metric = "max_od")
 
-plot_heatmap(growthAnalysis, "plots/mumax_plot.pdf", metric = "mumax")
+plot_heatmap(growthAnalysis, "plots/mumax_plot_heatmap_LB_and_M9.pdf", metric = "mumax")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 # Individual heat map 
 
 # LB only
-plot_heatmap_individual(growthAnalysis, "plots/LB_plot.pdf", metric = "max_od", medium = "LB")
+plot_heatmap_individual(growthAnalysis, "plots/maxOD_plot_heatmap.pdf", metric = "max_od", medium = "LB")
+plot_heatmap_individual(growthAnalysis, "plots/mumax_plot_heatmap.pdf", metric = "mumax", medium = "LB")
 
 # M9gluc only
-plot_heatmap_individual(growthAnalysis, "plots/M9_plot.pdf", metric = "max_od", medium = "M9gluc")
+plot_heatmap_individual(growthAnalysis, "plots/maxOD_plot_heatmap.pdf", metric = "max_od", medium = "M9gluc")
+plot_heatmap_individual(growthAnalysis, "plots/mumax_plot_heatmap.pdf", metric = "mumax", medium = "M9gluc")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 # Big facet plots showing the growth curve using OD for LB and M9 
 
-plot_OD_facet(data, "plots/LB_plot.pdf", growth_media = "LB")
+plot_OD_facet(data, "plots/all_replicate_facet_LB_plot.pdf", growth_media = "LB")
 
-plot_OD_facet(data, "plots/M9_plot.pdf", growth_media = "M9gluc")
+plot_OD_facet(data, "plots/all_replicate_facet_M9_plot.pdf", growth_media = "M9gluc")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 # Facet wrap plots looking at the OD level of each mutant at each temperature 
 
-plot_facet_wrap(growthAnalysis, "plots/LB_OD_wrap.pdf", growth_media = "LB", label_map = my_labels)
+plot_facet_wrap(growthAnalysis, "plots/LB_maxOD_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "LB")
 
-plot_facet_wrap(growthAnalysis, "plots/M9_OD_wrap.pdf", growth_media = "M9gluc", label_map = my_labels)
+plot_facet_wrap(growthAnalysis, "plots/M9_maxOD_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "M9gluc")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 # Facet wrap plots looking at the mumax of each mutant at each temperature 
 
-plot_facet_wrap(growthAnalysis, "plots/LB_mumax_plot.pdf", growth_media = "LB", metric = "mumax", label_map = my_labels)
+plot_facet_wrap(growthAnalysis, "plots/LB_mumax_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "LB", metric = "mumax")
 
-plot_facet_wrap(growthAnalysis, "plots/M9_mumax_plot.pdf", growth_media = "M9", metric = "mumax", label_map = my_labels)
+plot_facet_wrap(growthAnalysis, "plots/M9_mumax_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "M9", metric = "mumax")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -123,13 +132,6 @@ compareCustomGroups(
     list(strain = "M2", medium = "LB",     temp = 42)
   )
 )
-
-
-# Data wrangle Alicia's MIC 
-
-# In the facet plots with the red lines keep the red line but show the reps as dots 
-
-
 
 ### view
 
