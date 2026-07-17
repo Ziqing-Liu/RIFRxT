@@ -159,7 +159,36 @@ plot_OD_facet <- function(data, file_name, plates_to_include = NULL, growth_medi
 plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL, 
                             growth_media = c("LB", "M9gluc"),
                             metric = c("maxOD", "mumax"),
-                            label_map = NULL) {
+                            label_map = c(
+                              "rpoB_S522F" = "M1",
+                              "rpoB_L511P" = "M2",
+                              "rpoB_D516G" = "M3",
+                              "rpoB_I572S" = "M4",
+                              "rpoB_S512F" = "M5",
+                              "rpoB_S531F" = "M6",
+                              "rpoB_H526N" = "M7",
+                              "rpoB_R529L" = "M8",
+                              "rpoB_I572F" = "M9",
+                              "rpoB_S512P" = "M10",
+                              "rpoB_I572L" = "M11",
+                              "rpoB_H526Y" = "M12",
+                              "rpoB_L533P" = "M13",
+                              "rpoB_H526Q" = "M14",
+                              "rpoB_T563P" = "M15",
+                              "rpoB_S509R" = "M16",
+                              "rpoB_D516N" = "M17",
+                              "rpoB_D516V" = "M18",
+                              "rpoB_S531Y" = "M19",
+                              "rpoB_V146G" = "M20",
+                              "rpoB_G534C" = "M21",
+                              "rpoB_R529C" = "M22",
+                              "rpoB_R529G" = "M23",
+                              "rpoB_G570C" = "M24",
+                              "rpoB_Q513P" = "M25",
+                              "rpoB_V146F" = "M26",
+                              "rpoB_A532P" = "M27",
+                              "rpoB_H526D" = "M28"
+                            )) {
   growth_media <- match.arg(growth_media)
   metric <- match.arg(metric)
   
@@ -196,9 +225,9 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     )
   
   y_lab <- if (metric == "maxOD") {
-    paste0("OD (blanked) - ", growth_media)
+    "maximum OD"
   } else {
-    paste0("Maximum growth rate (mumax) - ", growth_media)
+    "Maximum growth rate"
   }
   
   r <- ggplot(dat_wrap, aes(
@@ -207,18 +236,10 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
     group = interaction(Replicate, mutant_ID)
   )) +
     geom_point(
-      colour  = "forestgreen",
+      colour  = "black",
       size    = 1.6,
       alpha   = 0.7,
       position = position_jitter(width = 0.15, height = 0)
-    ) +
-    geom_errorbar(
-      data = dat_mean,
-      aes(x = SetTemperature, y = mean_metric,
-          ymin = mean_metric - se_metric, ymax = mean_metric + se_metric,
-          group = mutant_ID),
-      width = 0.6, colour = "black", linewidth = 0.4,
-      inherit.aes = FALSE
     ) +
     geom_line(
       data = dat_mean,
@@ -237,7 +258,6 @@ plot_facet_wrap <- function(growthAnalysis, file_name, plates_to_include = NULL,
   ggsave(file_name, r, height = 8, width = 16, create.dir = TRUE)
   return(r)
 }
-
 
 #auto correlation makes vlaues at high temperature become weird 
 
