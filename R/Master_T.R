@@ -10,6 +10,7 @@ library(rstatix)
 library(outliers)
 library(dunn.test)
 library(car)
+library(writexl)
 
 
 source("R/Code_T.R")
@@ -24,6 +25,9 @@ data <- blankODs(data, method = "fixed", value = 0.05)
 
 growthAnalysis <- analyseODData(data, h = 20)
 
+result <- summariseGrowth(growthAnalysis, temps = 42, media = "LB")
+
+write_xlsx(result, "growth_summary_42C_LB.xlsx")
 
 ### Functions
 

@@ -1,5 +1,38 @@
 # Various plotting functions
 
+summariseGrowth <- function(growthAnalysis, temps = NULL, media = NULL,
+                            strain_col = "mutant_ID",
+                            temp_col   = "SetTemperature",
+                            medium_col = "growth_medium") {
+  
+  df <- growthAnalysis$pars
+  
+  missing_cols <- setdiff(c(strain_col, temp_col, medium_col), names(df))
+  if (length(missing_cols) > 0) {
+    stop("Column(s) not found: ", paste(missing_cols, collapse = ", "),
+         "\nAvailable columns: ", paste(names(df), collapse = ", "))
+  }
+  
+  if (!is.null(temps)) df <- df %>% filter(.data[[temp_col]] %in% temps)
+  if (!is.null(media)) df <- df %>% filter(.data[[medium_col]] %in% media)
+  
+  group_cols <- strain_col
+  if (is.null(temps) || length(temps) > 1) group_cols <- c(temp_col, group_cols)
+  if (is.null(media) || length(media) > 1) group_cols <- c(medium_col, group_cols)
+  
+  df %>%
+    group_by(across(all_of(group_cols))) %>%
+    summarise(
+      maxOD  = mean(maxOD, na.rm = TRUE),
+      mumax  = mean(mumax, na.rm = TRUE),
+      n_reps = n(),
+      .groups = "drop"
+    ) %>%
+    rename(mutant = all_of(strain_col)) %>%
+    arrange(across(all_of(setdiff(group_cols, strain_col))), mutant)
+}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Heat map 
 # ══════════════════════════════════════════════════════════════════════════════
