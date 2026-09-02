@@ -12,7 +12,6 @@ library(dunn.test)
 library(car)
 library(writexl)
 
-
 source("R/Code_T.R")
 
 filter <- dplyr::filter
@@ -25,7 +24,14 @@ data <- blankODs(data, method = "fixed", value = 0.05)
 
 growthAnalysis <- analyseODData(data, h = 20)
 
+###
+growthAnalysis$pars |>
+  dplyr::filter(mutant_ID == "M6", SetTemperature == 42)
+###
+
 result <- summariseGrowth(growthAnalysis, temps = 42, media = "LB")
+
+result
 
 write_xlsx(result, "growth_summary_42C_LB.xlsx")
 
