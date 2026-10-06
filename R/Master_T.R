@@ -1,4 +1,4 @@
-install.packages("installr")
+install.packages("patchwork")
 library(installr)
 updateR()
 
@@ -11,6 +11,7 @@ library(outliers)
 library(dunn.test)
 library(car)
 library(writexl)
+library(patchwork) 
 
 source("R/Code_T.R")
 
@@ -69,7 +70,7 @@ plot_OD_facet(data, "plots/all_replicate_facet_M9_plot.pdf", growth_media = "M9g
 
 # Facet wrap plots looking at the OD level of each mutant at each temperature 
 
-plot_facet_wrap(growthAnalysis, "plots/LB_maxOD_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "LB")
+plot_facet_wrap(growthAnalysis, "plots/LB_maxOD_of_mutants_at_each_temperature_facetplot.pdf")
 
 plot_facet_wrap(growthAnalysis, "plots/M9_maxOD_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "M9gluc")
 
@@ -77,9 +78,9 @@ plot_facet_wrap(growthAnalysis, "plots/M9_maxOD_of_mutants_at_each_temperature_f
 
 # Facet wrap plots looking at the mumax of each mutant at each temperature 
 
-plot_facet_wrap(growthAnalysis, "plots/LB_mumax_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "LB", metric = "mumax")
+plot_facet_wrap(growthAnalysis, "plots/LB_mumax_of_mutants_at_each_temperature_facetplot.pdf", metric = "mumax")
 
-plot_facet_wrap(growthAnalysis, "plots/M9_mumax_of_mutants_at_each_temperature_facetplot.pdf", growth_media = "M9", metric = "mumax")
+plot_facet_wrap(growthAnalysis, "plots/M9_mumax_of_mutants_at_each_temperature_facetplot.pdf", metric = "mumax")
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
