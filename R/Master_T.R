@@ -1,4 +1,4 @@
-install.packages("patchwork")
+install.packages("boot")
 library(installr)
 updateR()
 
@@ -11,7 +11,11 @@ library(outliers)
 library(dunn.test)
 library(car)
 library(writexl)
-library(patchwork) 
+library(patchwork)
+library(rTPC)
+library(nls.multstart)
+library(broom)
+library(boot)
 
 source("R/Code_T.R")
 
@@ -35,6 +39,9 @@ result <- summariseGrowth(growthAnalysis, temps = 42, media = "LB")
 result
 
 write_xlsx(result, "growth_summary_42C_LB.xlsx")
+
+rate = mumax * 60
+
 
 ### Functions
 
@@ -81,6 +88,13 @@ plot_facet_wrap(growthAnalysis, "plots/M9_maxOD_of_mutants_at_each_temperature_f
 plot_facet_wrap(growthAnalysis, "plots/LB_mumax_of_mutants_at_each_temperature_facetplot.pdf", metric = "mumax")
 
 plot_facet_wrap(growthAnalysis, "plots/M9_mumax_of_mutants_at_each_temperature_facetplot.pdf", metric = "mumax")
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# RTPC thermal performance curves 
+source("R/TPC_rTPC.R")
+
+
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
